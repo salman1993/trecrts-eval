@@ -1,16 +1,18 @@
 module.exports = function(io){
   var express = require('express')
   var router = express.Router();
+/*
   var gcm = require('node-gcm')
   var apn = require('apn')
   var push_auths = require('./push_auths.js')
   var apnConnection = new apn.Connection()
 
   var sender = new gcm.Sender(push_auths.gcm);
-  var registrationIds = [];
+*/
+  var registrationIds = []; // containts partids of all participants
   var loaded = false;
   var regIdx = 0;
-  const RATE_LIMIT = 10;
+  const RATE_LIMIT = 10; // max num of tweets per topic per client
   const MAX_ASS = 3;
   const MAX_CLIENTS = 3;
   function genID(){
@@ -30,7 +32,7 @@ module.exports = function(io){
     }
     return -1;
   }
-  function send_tweet_gcm(tweet,id){
+/*  function send_tweet_gcm(tweet,id){
     var message = new gcm.Message();
     message.addData('title', 'TREC RTS Mobile Judger');
     message.addData('message','There are pending tweets to judge.')
@@ -52,14 +54,18 @@ module.exports = function(io){
     apnConnection.pushNotification(note,new apn.Device(id))
   }
 
-
-  function send_tweet(tweet,interestIDs){
+*/
+  
+  // tweet: {"tweetid":tweetid, "topid":topid, "topic":title}
+  // interestIDs are partids of participants who are assigned to this topic (topicid)
+  function send_tweet(tweet, interestIDs){
     for (var i = 0; i < interestIDs.length; i++){
       var id = interestIDs[i]
       var idx = find_user(id);
       if (idx === -1)
         continue;
-      var currDevice = registrationIds[idx];
+      var currDevice = registrationIds[idx]; // currDevice: {'partid':part.partid,'type':part.platform,'conn':part.deviceid}
+      /*
       if(currDevice['type'] === 'gcm')
         send_tweet_gcm(tweet,currDevice['conn']);
       else if(currDevice['type'] === 'socket'){
@@ -67,6 +73,7 @@ module.exports = function(io){
       } else if(currDevice['type'] === 'apn'){
         send_tweet_apn(tweet,currDevice['conn'])
       }
+      */
     }
   }
   
@@ -191,18 +198,20 @@ module.exports = function(io){
     var tweetid = req.params.tweetid;
     var clientid = req.params.clientid;
     var db = req.db;
+    // validate client (client exists) with clientid
     validate_client(db,clientid,function(errors,results){
       if(errors || results.length === 0){
         res.status(500).json({'message':'Could not validate client: ' + clientid})
         return;
       }
+      // check topic exists with topicid
       db.query('select topid from topics where topid = ?;',topid,function(terr,tres){
         if(terr || tres.length === 0){
           res.status(500).json({'message':'Invalid topic identifier: ' + topid});
           return;
         }
-
-        db.query('select count(*) as cnt from requests_'+clientid+' where topid = ? and submitted between CURDATE() and date_add(CURDATE(),INTERVAL 1 day);', [topid], function(errors0,results0){
+        // check that this client did not post too many tweets (count) for this topicid
+        db.query('select count(*) as cnt from requests where clientid = ? and topid = ? and submitted between DATE_SUB(NOW(),INTERVAL 1 DAY) and NOW();', [clientid, topid], function(errors0,results0){
           if(errors0 || results0.length === 0){
             res.status(500).json({'message':'Could not process request for topid: ' + topid + ' and ' + tweetid});
             return;
@@ -210,12 +219,14 @@ module.exports = function(io){
             res.status(429).json({'message':'Rate limit exceeded for topid: ' + topid});
             return;
           }
-          db.query('insert requests_' + clientid + ' (topid,tweetid) values (?,?);',[topid,tweetid], function(errors1,results1){
+          // insert into requests table the topicid, tweetid, clientid
+          db.query('insert requests (topid,tweetid,clientid) values (?,?,?);',[topid,tweetid,clientid], function(errors1,results1){
             if(errors1 || results1.length === 0){
               res.status(500).json({'message':'Could not process request for topid: ' + topid + ' and ' + tweetid});
               return;
             }
-            db.query('select count(*) as cnt from seen_'+topid+' where tweetid = ?;',tweetid,function(errors4,results4){
+            // get the count from the seens table for this topicid and tweetid
+            db.query('select count(*) as cnt from seen where topid = ? and tweetid = ?;',[topid,tweetid],function(errors4,results4){
               if(errors4){
                 console.log("Something bad happened: " + errors4);
                 res.status(500).json({'message':'could not process request for topid: ' + topid + ' and ' + tweetid});
@@ -224,6 +235,7 @@ module.exports = function(io){
               // If we have seen the tweet before, do nothing
               if(results4[0].cnt === 0){
                 // Otherwise send it out to be judged and then insert it
+                // get the topic title
                 db.query('select title from topics where topid = ?;',topid,function(errors2,results2){
                   if(errors2 || results2.length === 0){
                     console.log('Something went horribly wrong');
@@ -231,6 +243,7 @@ module.exports = function(io){
                     return;
                   }
                   var title = results2[0].title
+                  // select participants who were assigned to judged this topic
                   db.query('select partid from topic_assignments where topid = ?;',topid,function(errors3,results3){
                     if(errors3){
                       console.log('Something went horribly wrong')
@@ -239,20 +252,25 @@ module.exports = function(io){
                     }
                     if(! loaded){
                       loaded = true;
+                      // select all participants from the DB and add to registrationIds
                       db.query('select partid,deviceid,platform from participants;',function(parerror,parresults){
                         for(var part in parresults){
                           registrationIds.push({'partid':part.partid,'type':part.platform,'conn':part.deviceid});
+                          // !!!! QUESTION: there is no platform in the DB table 'participants' (only partid, email, deviceid)
                         }
                       });
                     }
+                    // results3 contains participants who were assigned to judged this topic
                     if (results3.length !== 0){
                       var ids = []
                       for(var idx = 0; idx < results3.length; idx++){
                         ids.push(results3[idx].partid)
                       }
+                      // send tweet for judgement to the participants in ids
                       send_tweet({"tweetid":tweetid,"topid":topid,"topic":title},ids);
                     }
-                    db.query('insert into seen_'+topid+' (tweetid) values (?);',tweetid,function(errors5,results5){
+                    // mark this tweet as seen so that it is not judged again
+                    db.query('insert into seen (topid, tweetid) values (?,?);',[topid,tweetid],function(errors5,results5){
                       console.log(errors5)
                     });
                   });
@@ -273,7 +291,7 @@ module.exports = function(io){
     var partid = req.params.partid;
     //var partid = "foo";
     var db = req.db;
-    db.query('insert judgements_'+topid+'(assessor,tweetid,rel) values (?,?,?);',[partid,tweetid,rel],function(errors,results){
+    db.query('insert judgements (assessor,topid,tweetid,rel) values (?,?,?,?);',[partid,topid,tweetid,rel],function(errors,results){
       if(errors){
         console.log(errors)
         console.log("Unable to log: ",topid," ",tweetid," ",rel);
@@ -296,7 +314,7 @@ module.exports = function(io){
         res.status(500).json({'message':'Could not validate client: ' + clientid})
         return;
       }
-      db.query('select rel from judgements_'+topid+' where tweetid = ?;'[tweetid],function(errors1,results1){
+      db.query('select rel from judgements where tweetid = ? and topid = ?;'[tweetid],function(errors1,results1){
         if(errors1){
           res.status(500).json({'message':'Error retrieving judgement for : '+ tweetid + ' on ' + topid});
         }else if (results1.length ===0){
@@ -322,13 +340,14 @@ module.exports = function(io){
       }
       db.query('select count(*) as cnt from clients where groupid = ?;',[groupid],function(gerrors,gresults){
         if (gresults[0].cnt < MAX_CLIENTS){
-	  db.query('insert clients (groupid,clientid,ip,alias) values (?,?,?,?);',[groupid,clientid,req.ip,alias], function(errors1,results1){
+          db.query('insert clients (groupid,clientid,ip,alias) values (?,?,?,?);',[groupid,clientid,req.ip,alias], function(errors1,results1){
             if(errors1){
               res.status(500).json({'message':'Unable to register system.'});
               return;
             }
-            db.query('create table requests_'+clientid+' like requests_template;'); // Assume this works for now
-            //db.query('create table requests_digest_'+clientid+' like requests_template;'); // Assume this works for now
+            // No longer used with a unified table
+            // db.query('create table requests_'+clientid+' like requests_template;'); // Assume this works for now
+            // db.query('create table requests_digest_'+clientid+' like requests_template;'); // Assume this works for now
            res.json({'clientid':clientid});
           });
         }else{
@@ -415,12 +434,14 @@ module.exports = function(io){
       });
     });
   });
+
   router.delete('/unregister/mobile/:partid',function(req,res){
     var partid = req.params.partid
     var idx = find_user(partid)
     if (idx > -1) registrationIds.splice(idx,1)
     res.status(204).send();
   });
+
   router.get('/log/:clientid',function(req,res){
     var clientid = req.params.clientid;
     var db = req.db;
@@ -429,7 +450,7 @@ module.exports = function(io){
         res.status(500).json({'message':'Unable to validate clientid:' + clientid});
         return;
       }
-      db.query('select * from requests_'+clientid+';',function(errors1,results1){
+      db.query('select * from requests where clientid = ?;',clientid,function(errors1,results1){
         if(errors1){
           res.status(500).json({'message':'Unable to retrieve log for: ' + clientid});
           return;
@@ -437,8 +458,8 @@ module.exports = function(io){
         res.status(200).json(results1);
       });
     });
-
   });
+
   router.get('/topics/:uniqid', function(req,res){
     var uniqid = req.params.uniqid;
     var db = req.db;
@@ -447,7 +468,7 @@ module.exports = function(io){
         res.status(500).json({'message':'Unable to validate ID: ' + uniqid});
         return;
       }
-      db.query('select topid,title,description, narrative from topics;',function(errors1,results1){
+      db.query('select topid, title, description, narrative from topics;',function(errors1,results1){
         if(errors1){
           res.status(500).json({'message':'Unable to retrieve topics for client: ' + uniqid});
         }else{
