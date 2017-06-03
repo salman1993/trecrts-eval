@@ -66,6 +66,33 @@ INSERT INTO `groups` VALUES ('uwar','aroegies@uwaterloo.ca');
 UNLOCK TABLES;
 
 --
+-- Table structure for table `judgements`
+--
+
+DROP TABLE IF EXISTS `judgements`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `judgements` (
+  `assessor` text,
+  `topid` varchar(40),
+  `tweetid` text,
+  `rel` int(11) DEFAULT '0',
+  `submitted` datetime DEFAULT CURRENT_TIMESTAMP,
+  KEY `assessor` (`assessor`(40), `topid`, `tweetid`(40))
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `judgements`
+--
+
+LOCK TABLES `judgements_template` WRITE;
+/*!40000 ALTER TABLE `judgements` DISABLE KEYS */;
+/*!40000 ALTER TABLE `judgements` ENABLE KEYS */;
+UNLOCK TABLES;
+
+
+--
 -- Table structure for table `judgements_template`
 --
 
@@ -100,6 +127,7 @@ DROP TABLE IF EXISTS `participants`;
 CREATE TABLE `participants` (
   `partid` varchar(40) NOT NULL,
   `email` text,
+  `twitterhandle` text,
   `deviceid` text,
   PRIMARY KEY (`partid`),
   KEY `partid` (`partid`,`deviceid`(40))
@@ -112,7 +140,8 @@ CREATE TABLE `participants` (
 
 LOCK TABLES `participants` WRITE;
 /*!40000 ALTER TABLE `participants` DISABLE KEYS */;
-INSERT INTO `participants` VALUES ('batman','batman@batcave.org',NULL);
+INSERT INTO `participants` VALUES ('batman','batman@batcave.org', 'batman_tweets', NULL);
+INSERT INTO `participants` VALUES ('1','trec.rts.assessor1@gmail.com', 'rts_assessor1', NULL);
 /*!40000 ALTER TABLE `participants` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -172,7 +201,7 @@ DROP TABLE IF EXISTS `topic_assignments`;
 CREATE TABLE `topic_assignments` (
   `topid` varchar(40) NOT NULL,
   `partid` varchar(40) DEFAULT NULL,
-  PRIMARY KEY (`topid`),
+  PRIMARY KEY (`topid`, `partid`),
   KEY `topid` (`topid`,`partid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;

@@ -1,6 +1,24 @@
 module.exports = function(io){
+  const util = require('util');
   var express = require('express')
   var router = express.Router();
+  var Twitter = require('twitter');
+
+  // Twitter config
+  var twitter_config = require('../config.json');
+  var twitter_client = new Twitter(twitter_config);
+
+  // // this works!!
+  // twitter_client.get('statuses/show/869636558374281217', function(error, tweet, response) {
+  //   if(error) throw error;
+  //   console.log(tweet); 
+  // });
+
+  // var stream = twitter_client.stream('user')
+  // stream.on('direct_message', function (directMsg) {
+  //   //...
+  // })
+
 /*
   var gcm = require('node-gcm')
   var apn = require('apn')
@@ -55,16 +73,42 @@ module.exports = function(io){
   }
 
 */
+
+  function send_tweet_dm(tweet, partid, twitterhandle){
+    console.log("hello")
+    var text = "https://twitter.com/432142134/status/" + tweet["tweetid"]
+    text += "\nTopic: " + tweet["topid"] + " - " + tweet["topic"]
+    text += "\n\nRelevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['rel'], partid)
+    text += "\n\nNot Relevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['notrel'], partid)
+    text += "\n\nDuplicate: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['dup'], partid)
+
+    twitter_client.post('direct_messages/new', {screen_name: twitterhandle, text: text},  function(error, tweet, response) {
+      if(error) throw error;
+      console.log("success")
+      // console.log(tweet);  // Tweet body. 
+      // console.log(response);  // Raw response object. 
+    });
+  }
+
+
   
   // tweet: {"tweetid":tweetid, "topid":topid, "topic":title}
   // interestIDs are partids of participants who are assigned to this topic (topicid)
   function send_tweet(tweet, interestIDs){
     for (var i = 0; i < interestIDs.length; i++){
       var id = interestIDs[i]
+      console.log("id : " + id)
+      console.log("registrationIds: " + registrationIds)
+
       var idx = find_user(id);
+      console.log("idx: " + idx)
       if (idx === -1)
         continue;
-      var currDevice = registrationIds[idx]; // currDevice: {'partid':part.partid,'type':part.platform,'conn':part.deviceid}
+      var currPart = registrationIds[idx]; 
+      console.log("currPart: " + currPart)
+      //registrationIds.push({'partid':part.partid,'twitterhandle':part.twitterhandle,'email':part.email});
+      console.log("part email: " + currPart['email'])
+      send_tweet_dm(tweet, currPart['partid'], currPart['twitterhandle']);
       /*
       if(currDevice['type'] === 'gcm')
         send_tweet_gcm(tweet,currDevice['conn']);
@@ -104,6 +148,77 @@ module.exports = function(io){
   function isValidTweet(str){
     return str.match('[0-9]=') !== null
   }
+
+  var rel2id = {"notrel": 0, "rel": 1, "dup": 2}
+
+  function generate_judgement_link(topid, tweetid, relid, partid) {
+    var hostname = "localhost";
+    var port = 10101;
+    var link = util.format('%s:%s/judge/%s/%s/%s/%s', hostname, port, topid, tweetid, relid, partid);
+    return link;
+  }
+
+  router.get('/judge/:topid/:tweetid/:rel/:partid', function(req,res){
+    var topid = req.params.topid;
+    var tweetid = req.params.tweetid;
+    var rel = req.params.rel;
+    var partid = req.params.partid;
+    //var partid = "foo";
+    var db = req.db;
+    db.query('insert judgements (assessor,topid,tweetid,rel) values (?,?,?,?) ON DUPLICATE KEY UPDATE rel=?, submitted=NOW()',
+                                        [partid,topid,tweetid,rel,rel],function(errors,results){
+      if(errors){
+        console.log(errors)
+        console.log("Unable to log: ",topid," ",tweetid," ",rel);
+        res.status(500).json({message : 'Unable to relevance assessment'})
+      }else{
+        console.log("Logged: ",topid," ",tweetid," ",rel);
+        res.status(204).send()
+      }
+    });
+  });
+
+  // clients get back live assessments for the tweets posted for this topic
+  router.post('/assessments/:topid/:clientid',function(req,res){
+    var topid = req.params.topid;
+    var tweetid = req.params.tweetid;
+    var clientid = req.params.clientid;
+    var db = req.db;
+    // validate client (client exists) with clientid
+    validate_client(db,clientid,function(errors,results){
+      if(errors || results.length === 0){
+        res.status(500).json({'message':'Could not validate client: ' + clientid})
+        return;
+      }
+      // check topic exists with topicid
+      db.query('select topid from topics where topid = ?;',topid,function(terr,tres){
+        if(terr || tres.length === 0){
+          res.status(500).json({'message':'Invalid topic identifier: ' + topid});
+          return;
+        }
+        // FIXME: check that this client did not check for live assessments too many times - RATE LIMIT
+        var join_query = `
+          SELECT DISTINCT judgements.topid, judgements.tweetid, judgements.rel
+          FROM judgements INNER JOIN requests ON judgements.topid=requests.topid
+          WHERE judgements.tweetid IN (
+              SELECT DISTINCT requests.tweetid
+              FROM requests
+              WHERE requests.clientid=? and requests.topid=?
+          );
+        `        
+        db.query(join_query, [clientid, topid], function(errors0,results0){
+          if(errors0){
+            res.status(500).json({'message':'Could not process request for client, topic: ' + clientid + ', ' + topid});
+            return;
+          }
+          else {
+            res.json(results0); //send back the live assessments
+            return;
+          }
+        });
+      });
+    });
+  });
   
   router.get('/validate/part/:partid',function(req,res){
     var partid = req.params.partid;
@@ -250,29 +365,57 @@ module.exports = function(io){
                       res.status(500).json({'message':'could not process request for topid: ' + topid + ' and ' + tweetid});
                       return;
                     }
-                    if(! loaded){
+
+                    /// PROBLEM: Loading the IDs is not synchronous!
+                    if(!loaded){
                       loaded = true;
                       // select all participants from the DB and add to registrationIds
-                      db.query('select partid,deviceid,platform from participants;',function(parerror,parresults){
-                        for(var part in parresults){
-                          registrationIds.push({'partid':part.partid,'type':part.platform,'conn':part.deviceid});
-                          // !!!! QUESTION: there is no platform in the DB table 'participants' (only partid, email, deviceid)
+                      db.query('select partid,email,twitterhandle from participants;',function(parerror,parresults){
+                        console.log("parresults: " + parresults)
+                        console.log("parresults 0 : " + parresults[0])
+                        for (var i = 0; i < parresults.length; i++) {
+                          var part = parresults[i]
+                          console.log("part: " + part)
+                          console.log("part twitterhandle: " + part.twitterhandle)
+                          registrationIds.push({'partid':part.partid,'twitterhandle':part.twitterhandle,'email':part.email});
                         }
+                        // MAKE IT SYNCHRONOUS!
+                        console.log(results3)
+                        if (results3.length !== 0){
+                          var ids = []
+                          for(var idx = 0; idx < results3.length; idx++){
+                            ids.push(results3[idx].partid)
+                          }
+                          // send tweet for judgement to the participants in ids
+                          console.log("calling send_tweet....")
+                          send_tweet({"tweetid":tweetid,"topid":topid,"topic":title},ids);
+                        }
+                        // mark this tweet as seen so that it is not judged again
+                        db.query('insert into seen (topid, tweetid) values (?,?);',[topid,tweetid],function(errors5,results5){
+                          console.log(errors5)
+                        });
+                        
                       });
+                      console.log("in loaded: " + registrationIds)
                     }
-                    // results3 contains participants who were assigned to judged this topic
-                    if (results3.length !== 0){
-                      var ids = []
-                      for(var idx = 0; idx < results3.length; idx++){
-                        ids.push(results3[idx].partid)
+                    else {
+                      // results3 contains participants who were assigned to judged this topic
+                      console.log(results3)
+                      if (results3.length !== 0){
+                        var ids = []
+                        for(var idx = 0; idx < results3.length; idx++){
+                          ids.push(results3[idx].partid)
+                        }
+                        // send tweet for judgement to the participants in ids
+                        console.log("calling send_tweet....")
+                        send_tweet({"tweetid":tweetid,"topid":topid,"topic":title},ids);
                       }
-                      // send tweet for judgement to the participants in ids
-                      send_tweet({"tweetid":tweetid,"topid":topid,"topic":title},ids);
+                      // mark this tweet as seen so that it is not judged again
+                      db.query('insert into seen (topid, tweetid) values (?,?);',[topid,tweetid],function(errors5,results5){
+                        console.log(errors5)
+                      });
+
                     }
-                    // mark this tweet as seen so that it is not judged again
-                    db.query('insert into seen (topid, tweetid) values (?,?);',[topid,tweetid],function(errors5,results5){
-                      console.log(errors5)
-                    });
                   });
                 });
               }
