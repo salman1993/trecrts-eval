@@ -31,7 +31,7 @@ module.exports = function(io){
   var loaded = false;
   var regIdx = 0;
   const RATE_LIMIT = 10; // max num of tweets per topic per client
-  const ASSESSMENTS_PULL_LIMIT = 1; // max num of times client can pull assessments per hour
+  const ASSESSMENTS_PULL_LIMIT = 2; // max num of times client can pull assessments per hour
   const MAX_ASS = 3;
   const MAX_CLIENTS = 3;
   function genID(){
