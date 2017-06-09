@@ -42,6 +42,24 @@ LOCK TABLES `clients` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `assessments_pulled`
+--
+
+DROP TABLE IF EXISTS `groups`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `assessments_pulled` (
+  `rowid` int NOT NULL AUTO_INCREMENT,
+  `clientid` varchar(12) DEFAULT NULL,
+  `topid` text,
+  `submitted` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (rowid)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+
+
+--
 -- Table structure for table `groups`
 --
 

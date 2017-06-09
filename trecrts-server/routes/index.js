@@ -31,6 +31,7 @@ module.exports = function(io){
   var loaded = false;
   var regIdx = 0;
   const RATE_LIMIT = 10; // max num of tweets per topic per client
+  const ASSESSMENTS_PULL_LIMIT = 1; // max num of times client can pull assessments per hour
   const MAX_ASS = 3;
   const MAX_CLIENTS = 3;
   function genID(){
@@ -152,7 +153,7 @@ module.exports = function(io){
   var rel2id = {"notrel": 0, "rel": 1, "dup": 2}
 
   function generate_judgement_link(topid, tweetid, relid, partid) {
-    var hostname = "localhost";
+    var hostname = "http://localhost";
     var port = 10101;
     var link = util.format('%s:%s/judge/%s/%s/%s/%s', hostname, port, topid, tweetid, relid, partid);
     return link;
@@ -196,25 +197,41 @@ module.exports = function(io){
           res.status(500).json({'message':'Invalid topic identifier: ' + topid});
           return;
         }
-        // FIXME: check that this client did not check for live assessments too many times - RATE LIMIT
-        var join_query = `
-          SELECT DISTINCT judgements.topid, judgements.tweetid, judgements.rel
-          FROM judgements INNER JOIN requests ON judgements.topid=requests.topid
-          WHERE judgements.tweetid IN (
-              SELECT DISTINCT requests.tweetid
-              FROM requests
-              WHERE requests.clientid=? and requests.topid=?
-          );
-        `        
-        db.query(join_query, [clientid, topid], function(errors0,results0){
-          if(errors0){
-            res.status(500).json({'message':'Could not process request for client, topic: ' + clientid + ', ' + topid});
+
+        // check that this client did not check for live assessments too many times - PULL LIMIT per 1 HOUR
+        db.query('select count(*) as cnt from assessments_pulled where clientid = ? and topid = ? and submitted between DATE_SUB(NOW(),INTERVAL 1 HOUR) and NOW();', [clientid, topid], function(errors0,results0){
+          if(errors0 || results0.length === 0){
+            res.status(500).json({'message':'Could not process live assessments for topid, clientid: ' + topid + ' and ' + clientid});
+            return;
+          }else if(results0[0].cnt >= ASSESSMENTS_PULL_LIMIT){
+            res.status(429).json({'message':'Rate limit exceeded for pulling live assessments for topid, clientid: ' + topid + ' and ' + clientid});
             return;
           }
-          else {
-            res.json(results0); //send back the live assessments
-            return;
-          }
+
+          // insert into assessments_pulled table the topicid, clientid
+          db.query('insert assessments_pulled (clientid, topid) values (?,?);',[clientid, topid], function(errors1,results1){
+            if(errors1 || results1.length === 0){
+              res.status(500).json({'message':'Could not process request for topid, clientid: ' + topid + ' and ' + clientid});
+              return;
+            }
+
+            var join_query = `
+              SELECT DISTINCT judgements.topid, judgements.tweetid, judgements.rel
+              FROM judgements INNER JOIN requests 
+                  ON judgements.topid=requests.topid AND judgements.tweetid = requests.tweetid
+              WHERE requests.clientid = ? and requests.topid = ?;
+            `        
+            db.query(join_query, [clientid, topid], function(errors2,results2){
+              if(errors2){
+                res.status(500).json({'message':'Could not process request for client, topic: ' + clientid + ', ' + topid});
+                return;
+              }
+              else {
+                res.json(results2); //send back the live assessments
+                return;
+              }
+            });
+          });
         });
       });
     });
