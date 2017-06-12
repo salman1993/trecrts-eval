@@ -11,7 +11,7 @@ module.exports = function(io){
   // // this works!!
   // twitter_client.get('statuses/show/869636558374281217', function(error, tweet, response) {
   //   if(error) throw error;
-  //   console.log(tweet); 
+  //   console.log(tweet);
   // });
 
   // var stream = twitter_client.stream('user')
@@ -76,8 +76,8 @@ module.exports = function(io){
 */
 
   function send_tweet_dm(tweet, partid, twitterhandle){
-    console.log("hello")
-    var text = "https://twitter.com/432142134/status/" + tweet["tweetid"]
+    // console.log("hello")
+    var text = "https://twitter.com/432142134/status/" + tweet["tweetid"] // used random user id
     text += "\nTopic: " + tweet["topid"] + " - " + tweet["topic"]
     text += "\n\nRelevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['rel'], partid)
     text += "\n\nNot Relevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['notrel'], partid)
@@ -86,29 +86,29 @@ module.exports = function(io){
     twitter_client.post('direct_messages/new', {screen_name: twitterhandle, text: text},  function(error, tweet, response) {
       if(error) throw error;
       console.log("success")
-      // console.log(tweet);  // Tweet body. 
-      // console.log(response);  // Raw response object. 
+      // console.log(tweet);  // Tweet body.
+      // console.log(response);  // Raw response object.
     });
   }
 
 
-  
+
   // tweet: {"tweetid":tweetid, "topid":topid, "topic":title}
   // interestIDs are partids of participants who are assigned to this topic (topicid)
   function send_tweet(tweet, interestIDs){
     for (var i = 0; i < interestIDs.length; i++){
       var id = interestIDs[i]
-      console.log("id : " + id)
-      console.log("registrationIds: " + registrationIds)
+      // console.log("id : " + id)
+      // console.log("registrationIds: " + registrationIds)
 
       var idx = find_user(id);
-      console.log("idx: " + idx)
+      // console.log("idx: " + idx)
       if (idx === -1)
         continue;
-      var currPart = registrationIds[idx]; 
-      console.log("currPart: " + currPart)
+      var currPart = registrationIds[idx];
+      // console.log("currPart: " + currPart)
       //registrationIds.push({'partid':part.partid,'twitterhandle':part.twitterhandle,'email':part.email});
-      console.log("part email: " + currPart['email'])
+      // console.log("part email: " + currPart['email'])
       send_tweet_dm(tweet, currPart['partid'], currPart['twitterhandle']);
       /*
       if(currDevice['type'] === 'gcm')
@@ -121,15 +121,15 @@ module.exports = function(io){
       */
     }
   }
-  
+
   function validate(db,table,col, id,cb){
     db.query('select * from '+table+' where '+col+' = ?;',[id],cb);
   }
-  
+
   function validate_group(db,groupid,cb){
     validate(db,'groups','groupid',groupid,cb);
   }
-  
+
   function validate_client(db,clientid,cb){
     validate(db,'clients','clientid',clientid,cb);
   }
@@ -153,9 +153,10 @@ module.exports = function(io){
   var rel2id = {"notrel": 0, "rel": 1, "dup": 2}
 
   function generate_judgement_link(topid, tweetid, relid, partid) {
-    var hostname = "http://localhost";
-    var port = 10101;
-    var link = util.format('%s:%s/judge/%s/%s/%s/%s', hostname, port, topid, tweetid, relid, partid);
+    var hostname = "http://ts4.io";
+    // var port = 10101;
+    // var link = util.format('%s:%s/judge/%s/%s/%s/%s', hostname, port, topid, tweetid, relid, partid);
+    var link = util.format('%s/judge/%s/%s/%s/%s', hostname, topid, tweetid, relid, partid);
     return link;
   }
 
@@ -217,10 +218,10 @@ module.exports = function(io){
 
             var join_query = `
               SELECT DISTINCT judgements.topid, judgements.tweetid, judgements.rel
-              FROM judgements INNER JOIN requests 
+              FROM judgements INNER JOIN requests
                   ON judgements.topid=requests.topid AND judgements.tweetid = requests.tweetid
               WHERE requests.clientid = ? and requests.topid = ?;
-            `        
+            `
             db.query(join_query, [clientid, topid], function(errors2,results2){
               if(errors2){
                 res.status(500).json({'message':'Could not process request for client, topic: ' + clientid + ', ' + topid});
@@ -236,7 +237,7 @@ module.exports = function(io){
       });
     });
   });
-  
+
   router.get('/validate/part/:partid',function(req,res){
     var partid = req.params.partid;
     var db = req.db;
@@ -294,7 +295,7 @@ module.exports = function(io){
     });
   });
 
-// NOT USED FOR RTS 2016  
+// NOT USED FOR RTS 2016
 /*  router.post('/tweets/:topid/:clientid',function(req,res){
     var topid = req.params.topid;
     var clientid  = req.params.clientid;
@@ -314,7 +315,7 @@ module.exports = function(io){
           stmt += ',(\'' + tweets[i] + '\',\'' + topid + '\')';
         } else {
           stmt += '(\'' + tweets[i] + '\',\'' + topid + '\')';
-        }  
+        }
       }
       db.query('insert into requests_digest_' + clientid + ' (docid,topid) values ' + [stmt],function(errors0,results0){
         if (errors)
@@ -411,7 +412,7 @@ module.exports = function(io){
                         db.query('insert into seen (topid, tweetid) values (?,?);',[topid,tweetid],function(errors5,results5){
                           console.log(errors5)
                         });
-                        
+
                       });
                       console.log("in loaded: " + registrationIds)
                     }
@@ -438,12 +439,12 @@ module.exports = function(io){
               }
             });
             res.status(204).send();
-          });          
+          });
         });
       });
     });
   });
-  
+
   router.post('/judge/:topid/:tweetid/:rel/:partid', function(req,res){
     var topid = req.params.topid;
     var tweetid = req.params.tweetid;
@@ -462,7 +463,7 @@ module.exports = function(io){
       }
     });
   });
- 
+
 // NOT USED IN RTS 2016
 /*  router.get('/judge/:topid/:tweetid/:clientid', function(req,res){
     var clientid = req.params.clientid;
@@ -484,7 +485,7 @@ module.exports = function(io){
       });
     });
   });*/
-  
+
   router.post('/register/system/', function(req,res){
     var groupid = req.body.groupid;
     var alias = req.body.alias;
@@ -516,7 +517,7 @@ module.exports = function(io){
       });
     });
   });
-  
+
   router.get('/topics/available/:uniqid/:topid', function(req,res){
     var db = req.db;
     var uniqid = req.params.uniqid;
@@ -553,7 +554,7 @@ module.exports = function(io){
           stmt += ',(\'' + topids[i] + '\',\'' + partid + '\')';
         } else {
           stmt += '(\'' + topids[i] + '\',\'' + partid + '\')';
-        }  
+        }
       }
       db.query('insert ignore into topic_assignments (topid,partid) values ' + [stmt],function(errors1,results1){
         if (errors1)
@@ -639,7 +640,7 @@ module.exports = function(io){
   });
 
   // TODO: Figure out way to incorporate socket based connections without requiring an actual id
-  
+
   io.on('connection', function(socket){
     socket.on('register',function(){
       console.log("Registered")
