@@ -26,7 +26,7 @@ CREATE TABLE `assessments_pulled` (
   `rowid` int(11) NOT NULL AUTO_INCREMENT,
   `clientid` varchar(12) DEFAULT NULL,
   `topid` text,
-  `submitted` datetime DEFAULT CURRENT_TIMESTAMP,
+  `submitted` timestamp DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`rowid`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -52,7 +52,7 @@ CREATE TABLE `clients` (
   `groupid` text,
   `clientid` varchar(12) DEFAULT NULL,
   `ip` varchar(30) DEFAULT NULL,
-  `register_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `register_time` timestamp DEFAULT CURRENT_TIMESTAMP,
   `alias` text,
   KEY `groupid` (`groupid`(40),`clientid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -131,7 +131,7 @@ CREATE TABLE `log_table` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `level` varchar(45) NOT NULL,
   `message` text NOT NULL,
-  `timestamp` datetime NOT NULL,
+  `timestamp` timestamp NOT NULL,
   `meta` varchar(255) DEFAULT NULL,
   `hostname` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
