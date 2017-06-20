@@ -176,7 +176,7 @@ module.exports = function(io){
         res.status(500).json({message : 'Unable to relevance assessment'})
       }else{
         console.log("Logged: ",topid," ",tweetid," ",rel);
-        res.status(204).send()
+        res.send('Success! Stored/Updated the relevance judgement.')
       }
     });
   });
