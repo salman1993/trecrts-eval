@@ -60,8 +60,8 @@ def add_to_participants(partid, email, handle):
   sql_command = "INSERT INTO participants (partid, email, twitterhandle, deviceid) VALUES (\"{}\", \"{}\", \"{}\", NULL);".format(partid, email, handle)
   execute_sql_command(sql_command)
 
-def add_to_topics(topid, groupid):
-  sql_command = "INSERT INTO topics (topid, title, description, narrative) VALUES (\"{}\", \"{}\", \"{}\", \"{}\");".format(topid, groupid, groupid, groupid)
+def add_to_topics(topid):
+  sql_command = "INSERT INTO topics (topid, title, description, narrative) VALUES (\"{}\", \"{}\", \"{}\", \"{}\");".format(topid, topid, topid, topid)
   execute_sql_command(sql_command)
 
 def add_to_topic_assignments(topid, partid):
@@ -73,7 +73,7 @@ def add_participants(infile):
     for i, part in enumerate(participants):
       groupid, alias, email, twitterhandle, clientid = part
       partid = groupid
-      topid = i
+      topid = groupid
       print("{} - {} - {} - {} - {}".format(groupid, alias, email, twitterhandle, clientid))
 
       # add to groups table
@@ -86,7 +86,7 @@ def add_participants(infile):
       add_to_participants(partid, email, twitterhandle)
 
       # add fake topic to topics table
-      add_to_topics(topid, groupid)
+      add_to_topics(topid)
 
       # assign that fake topic to the participant
       add_to_topic_assignments(topid, partid)
