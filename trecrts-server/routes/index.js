@@ -237,7 +237,7 @@ module.exports = function(io){
                 }
                 else {
                   // final_results: list of relevance judgements & last_submitted time 
-                  var final_results = { judgements: results2, last_submitted: results3[0].last }
+                  var final_results = { judgements: results2, last_pulled: results3[0].last }
                   res.json(final_results); //send back the live assessments
                   return;
                 }
