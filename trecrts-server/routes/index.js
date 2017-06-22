@@ -30,8 +30,8 @@ module.exports = function(io){
   var registrationIds = []; // containts partids of all participants
   var loaded = false;
   var regIdx = 0;
-  const RATE_LIMIT = 10; // max num of tweets per topic per client
-  const ASSESSMENTS_PULL_LIMIT = 2; // max num of times client can pull assessments per hour
+  const RATE_LIMIT = 1000; // max num of tweets per topic per client
+  const ASSESSMENTS_PULL_LIMIT = 1000; // max num of times client can pull assessments per hour
   const MAX_ASS = 3;
   const MAX_CLIENTS = 3;
   function genID(){
@@ -153,7 +153,7 @@ module.exports = function(io){
   var rel2id = {"notrel": 0, "rel": 1, "dup": 2}
 
   function generate_judgement_link(topid, tweetid, relid, partid) {
-    //var hostname = "http://ts4.io";
+    // var hostname = "localhost:10101";
     var hostname = "http://scspc654.cs.uwaterloo.ca";
     // var port = 10101;
     // var link = util.format('%s:%s/judge/%s/%s/%s/%s', hostname, port, topid, tweetid, relid, partid);
@@ -176,7 +176,8 @@ module.exports = function(io){
         res.status(500).json({message : 'Unable to relevance assessment'})
       }else{
         console.log("Logged: ",topid," ",tweetid," ",rel);
-        res.send('Success! Stored/Updated the relevance judgement.')
+        // res.send('Success! Stored/Updated the relevance judgement.')
+        res.render('judgement', { judgement: rel });
       }
     });
   });
@@ -225,13 +226,22 @@ module.exports = function(io){
             `
             db.query(join_query, [clientid, topid], function(errors2,results2){
               if(errors2){
-                res.status(500).json({'message':'Could not process request for client, topic: ' + clientid + ', ' + topid});
+                res.status(500).json({'message':'Could not process request (join) for client, topic: ' + clientid + ', ' + topid});
                 return;
               }
-              else {
-                res.json(results2); //send back the live assessments
-                return;
-              }
+              
+              db.query('SELECT MAX(submitted) as last FROM assessments_pulled WHERE clientid=? AND topid=?;', [clientid, topid], function(errors3,results3){
+                if(errors3){
+                  res.status(500).json({'message':'Could not process request (last submitted) for client, topic: ' + clientid + ', ' + topid});
+                  return;
+                }
+                else {
+                  // final_results: list of relevance judgements & last_submitted time 
+                  var final_results = { judgements: results2, last_submitted: results3[0].last }
+                  res.json(final_results); //send back the live assessments
+                  return;
+                }
+              });
             });
           });
         });
