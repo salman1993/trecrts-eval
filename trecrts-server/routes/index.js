@@ -219,7 +219,7 @@ module.exports = function(io){
             }
 
             var join_query = `
-              SELECT DISTINCT judgements.topid, judgements.tweetid, judgements.rel
+              SELECT DISTINCT judgements.topid, judgements.tweetid, judgements.rel, judgements.submitted
               FROM judgements INNER JOIN requests
                   ON judgements.topid=requests.topid AND judgements.tweetid = requests.tweetid
               WHERE requests.clientid = ? and requests.topid = ?;
