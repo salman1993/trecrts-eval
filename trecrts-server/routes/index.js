@@ -209,41 +209,40 @@ module.exports = function(io){
           }else if(results0[0].cnt >= ASSESSMENTS_PULL_LIMIT){
             res.status(429).json({'message':'Rate limit exceeded for pulling live assessments for topid, clientid: ' + topid + ' and ' + clientid});
             return;
-          }
+          }          
 
-          // insert into assessments_pulled table the topicid, clientid
-          db.query('insert assessments_pulled (clientid, topid) values (?,?);',[clientid, topid], function(errors1,results1){
-            if(errors1 || results1.length === 0){
-              res.status(500).json({'message':'Could not process request for topid, clientid: ' + topid + ' and ' + clientid});
+          var join_query = `
+            SELECT DISTINCT judgements.topid, judgements.tweetid, judgements.rel, judgements.submitted
+            FROM judgements INNER JOIN requests
+                ON judgements.topid=requests.topid AND judgements.tweetid = requests.tweetid
+            WHERE requests.clientid = ? and requests.topid = ?;
+          `
+          db.query(join_query, [clientid, topid], function(errors2,results2){
+            if(errors2){
+              res.status(500).json({'message':'Could not process request (join) for client, topic: ' + clientid + ', ' + topid});
               return;
             }
-
-            var join_query = `
-              SELECT DISTINCT judgements.topid, judgements.tweetid, judgements.rel, judgements.submitted
-              FROM judgements INNER JOIN requests
-                  ON judgements.topid=requests.topid AND judgements.tweetid = requests.tweetid
-              WHERE requests.clientid = ? and requests.topid = ?;
-            `
-            db.query(join_query, [clientid, topid], function(errors2,results2){
-              if(errors2){
-                res.status(500).json({'message':'Could not process request (join) for client, topic: ' + clientid + ', ' + topid});
+            
+            // gotta check last pulled before insert this entry to assessments_pulled
+            db.query('SELECT MAX(submitted) as last FROM assessments_pulled WHERE clientid=? AND topid=?;', [clientid, topid], function(errors3,results3){
+              if(errors3){
+                res.status(500).json({'message':'Could not process request (last submitted) for client, topic: ' + clientid + ', ' + topid});
                 return;
-              }
-              
-              db.query('SELECT MAX(submitted) as last FROM assessments_pulled WHERE clientid=? AND topid=?;', [clientid, topid], function(errors3,results3){
-                if(errors3){
-                  res.status(500).json({'message':'Could not process request (last submitted) for client, topic: ' + clientid + ', ' + topid});
+              }              
+              // final_results: list of relevance judgements & last_submitted time 
+              var final_results = { judgements: results2, last_pulled: results3[0].last }
+
+              // insert into assessments_pulled table the topicid, clientid
+              db.query('insert assessments_pulled (clientid, topid) values (?,?);',[clientid, topid], function(errors1,results1){
+                if(errors1 || results1.length === 0){
+                  res.status(500).json({'message':'Could not process request (insert assessments_pulled) for topid, clientid: ' + topid + ' and ' + clientid});
                   return;
                 }
-                else {
-                  // final_results: list of relevance judgements & last_submitted time 
-                  var final_results = { judgements: results2, last_pulled: results3[0].last }
-                  res.json(final_results); //send back the live assessments
-                  return;
-                }
+                res.json(final_results); //send back the live assessments
               });
+
             });
-          });
+          });          
         });
       });
     });
