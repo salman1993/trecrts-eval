@@ -31,7 +31,7 @@ def send_tweet_dm(tweetid, topid, partid, twitterhandle, api):
     text += "\n\nDuplicate: " + generate_judgement_link(topid, tweetid, rel2id['dup'], partid)
 
     # print(text)
-    api.send_direct_message(twitterhandle, text)
+    api.send_direct_message(twitterhandle, text=text)
     
 
 def get_assessors(infile):
