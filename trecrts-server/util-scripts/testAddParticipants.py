@@ -2,7 +2,7 @@
 """Add participants from file
 
 Usage: 
-    python testAddParticipants.py [infile]
+    python testAddParticipants.py -f [infile]
 """
 
 import sys
@@ -28,7 +28,7 @@ def get_participants(infile):
       items = line.split("|")
       groupid = items[0].strip()
       alias = items[1].strip()
-      email = items[3].strip().split(" ")[0].strip() # just get the first email
+      email = items[3].strip().split(",")[0].strip() # just get the first email
       twitterhandle = items[4].strip()
       # generate client key and add that
       clientid = generate_client_key()
