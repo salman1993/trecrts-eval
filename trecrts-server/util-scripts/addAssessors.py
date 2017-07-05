@@ -17,6 +17,14 @@ from subprocess import call
 
 rel2id = {"notrel": 0, "rel": 1, "dup": 2}
 
+def generate_assessor_id():
+    chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    key = ''
+    for i in range(12):
+      index = math.floor(random.random() * len(chars))
+      key += chars[index]
+    return key
+
 def generate_judgement_link(topid, tweetid, relid, partid):
     # hostname = "localhost:10101"
     hostname = "http://scspc654.cs.uwaterloo.ca"
@@ -31,7 +39,10 @@ def send_tweet_dm(tweetid, topid, partid, twitterhandle, api):
     text += "\n\nDuplicate: " + generate_judgement_link(topid, tweetid, rel2id['dup'], partid)
 
     # print(text)
-    api.send_direct_message(twitterhandle, text=text)
+    try:
+      api.send_direct_message(twitterhandle, text=text)
+    except: 
+      print("ERROR: Could not send DM to: {}".format(twitterhandle))
     
 
 def get_assessors(infile):
@@ -43,7 +54,8 @@ def get_assessors(infile):
       last_name = items[1].strip()
       email = items[2].strip()
       twitterhandle = items[3].strip()
-      assessor = (email, twitterhandle)
+      partid = generate_assessor_id()
+      assessor = (partid, email, twitterhandle)
       assessors.append(assessor)
 
   return assessors
@@ -75,12 +87,14 @@ def add_assessors(configfile, infile):
 
     assessors = get_assessors(infile)
     for i, assessor in enumerate(assessors):
-      email, twitterhandle = assessor
-      partid = twitterhandle
+      partid, email, twitterhandle = assessor
       print("{} - {} - {}".format(partid, email, twitterhandle))
 
       # follow twitterhandle
-      api.create_friendship(twitterhandle)
+      try:
+        api.create_friendship(twitterhandle)
+      except: 
+        print("ERROR: Could not FOLLOW user: {}".format(twitterhandle))
 
       # add to participants table
       add_to_participants(partid, email, twitterhandle)
