@@ -153,8 +153,8 @@ module.exports = function(io){
   var rel2id = {"notrel": 0, "rel": 1, "dup": 2}
 
   function generate_judgement_link(topid, tweetid, relid, partid) {
-    // var hostname = "localhost:10101";
-    var hostname = "http://scspc654.cs.uwaterloo.ca";
+    var hostname = "localhost:10101";
+    // var hostname = "http://scspc654.cs.uwaterloo.ca";
     // var port = 10101;
     // var link = util.format('%s:%s/judge/%s/%s/%s/%s', hostname, port, topid, tweetid, relid, partid);
     var link = util.format('%s/judge/%s/%s/%s/%s', hostname, topid, tweetid, relid, partid);
@@ -168,18 +168,36 @@ module.exports = function(io){
     var partid = req.params.partid;
     //var partid = "foo";
     var db = req.db;
-    db.query('insert judgements (assessor,topid,tweetid,rel) values (?,?,?,?) ON DUPLICATE KEY UPDATE rel=?, submitted=NOW()',
-                                        [partid,topid,tweetid,rel,rel],function(errors,results){
-      if(errors){
-        console.log(errors)
-        console.log("Unable to log: ",topid," ",tweetid," ",rel);
-        res.status(500).json({message : 'Unable to relevance assessment'})
-      }else{
-        console.log("Logged: ",topid," ",tweetid," ",rel);
-        // res.send('Success! Stored/Updated the relevance judgement.')
-        res.render('judgement', { judgement: rel });
+
+    // validate partid 
+    db.query('select * from participants where partid = ?;',partid,function(errors0,results0){
+      if(errors0 || results0.length === 0) {
+        res.status(500).json({'message':'Invalid participant: ' + partid});
+        return;
       }
-    });
+
+      // validate topid for this partid
+      db.query('select * from topic_assignments where topid = ? and partid = ?;',[topid, partid],function(errors1,results1){
+        if(errors1 || results1.length === 0) {
+          res.status(500).json({'message':'Unable to identify participant: ' + partid + 'for topic: ' + topid});
+          return;
+        }
+
+        // insert judgement into DB
+        db.query('insert judgements (assessor,topid,tweetid,rel) values (?,?,?,?) ON DUPLICATE KEY UPDATE rel=?, submitted=NOW()',
+                                        [partid,topid,tweetid,rel,rel],function(errors,results){
+          if(errors){
+            console.log(errors)
+            console.log("Unable to log: ",topid," ",tweetid," ",rel);
+            res.status(500).json({message : 'Unable to relevance assessment'})
+          }else{
+            console.log("Logged: ",topid," ",tweetid," ",rel);
+            // res.send('Success! Stored/Updated the relevance judgement.')
+            res.render('judgement', { judgement: rel });
+          }
+        });
+      });
+    });    
   });
 
   // clients get back live assessments for the tweets posted for this topic
