@@ -1,2 +1,5 @@
 db_trecrts_*
 config.json
+util-scripts/sample-*
+log.*
+npm-debug*
