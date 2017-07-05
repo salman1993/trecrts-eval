@@ -179,7 +179,7 @@ module.exports = function(io){
       // validate topid for this partid
       db.query('select * from topic_assignments where topid = ? and partid = ?;',[topid, partid],function(errors1,results1){
         if(errors1 || results1.length === 0) {
-          res.status(500).json({'message':'Unable to identify participant: ' + partid + 'for topic: ' + topid});
+          res.status(500).json({'message':'Unable to identify participant: ' + partid + ' for topic: ' + topid});
           return;
         }
 
