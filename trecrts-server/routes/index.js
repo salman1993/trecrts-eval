@@ -153,10 +153,8 @@ module.exports = function(io){
   var rel2id = {"notrel": 0, "rel": 1, "dup": 2}
 
   function generate_judgement_link(topid, tweetid, relid, partid) {
-    var hostname = "localhost:10101";
-    // var hostname = "http://scspc654.cs.uwaterloo.ca";
-    // var port = 10101;
-    // var link = util.format('%s:%s/judge/%s/%s/%s/%s', hostname, port, topid, tweetid, relid, partid);
+    // var hostname = "localhost:10101";
+    var hostname = "http://scspc654.cs.uwaterloo.ca";
     var link = util.format('%s/judge/%s/%s/%s/%s', hostname, topid, tweetid, relid, partid);
     return link;
   }
