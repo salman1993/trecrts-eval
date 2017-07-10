@@ -31,7 +31,7 @@ def generate_judgement_link(topid, tweetid, relid, partid):
     link = '%s/judge/%s/%s/%s/%s' %  (hostname, topid, tweetid, relid, partid)
     return link
 
-def send_tweet_dm(tweetid, topid, partid, twitterhandle, api):
+def send_tweet_dm(tweetid, topid, partid, twitterhandle, followers, api):
     text = "https://twitter.com/432142134/status/" + tweetid 
     text += "\nTopic: " + topid
     text += "\n\nRelevant: " + generate_judgement_link(topid, tweetid, rel2id['rel'], partid)
@@ -40,7 +40,10 @@ def send_tweet_dm(tweetid, topid, partid, twitterhandle, api):
 
     # print(text)
     try:
-      api.send_direct_message(twitterhandle, text=text)
+      if twitterhandle in followers: 
+        api.send_direct_message(twitterhandle, text=text)
+      else:
+        print("INFO: {0} not following me so did not send DM to: {0}".format(twitterhandle))
     except: 
       print("ERROR: Could not send DM to: {}".format(twitterhandle))
     
@@ -79,11 +82,19 @@ def add_to_topic_assignments(topid, partid):
   sql_command = "INSERT INTO topic_assignments (topid, partid) VALUES (\"{}\", \"{}\");".format(topid, partid)
   execute_sql_command(sql_command)
 
+def get_followers(api):
+  followers_list = api.followers() 
+  followers_names_set = set()
+  for fol in followers_list:
+    followers_names_set.add( fol.screen_name.lower() )
+  return followers_names_set
+
 def add_assessors(configfile, infile):
     config = json.loads( open(configfile).read() )
     auth = tweepy.OAuthHandler(config['consumer_key'], config['consumer_secret'])
     auth.set_access_token(config['access_token_key'], config['access_token_secret'])
     api = tweepy.API(auth)
+    followers = get_followers(api)
 
     assessors = get_assessors(infile)
     for i, assessor in enumerate(assessors):
@@ -106,7 +117,7 @@ def add_assessors(configfile, infile):
 
       # send an example tweet DM for the fake topic
       tweetid = "880795158639497219"
-      send_tweet_dm(tweetid, topid, partid, twitterhandle, api)
+      send_tweet_dm(tweetid, topid, partid, twitterhandle, followers, api)
 
     return assessors
 
