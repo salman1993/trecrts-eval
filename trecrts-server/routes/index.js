@@ -75,7 +75,7 @@ module.exports = function(io){
 
 */
 
-  function send_tweet_dm(tweet, partid, twitterhandle) {
+  function send_tweet_dm(db, tweet, partid, twitterhandle) {
     // console.log("hello")
     var text = "https://twitter.com/432142134/status/" + tweet["tweetid"] // used random user id
     text += "\nTopic: " + tweet["topid"] + " - " + tweet["topic"]
@@ -107,7 +107,7 @@ module.exports = function(io){
 
   // tweet: {"tweetid":tweetid, "topid":topid, "topic":title}
   // interestIDs are partids of participants who are assigned to this topic (topicid)
-  function send_tweet(tweet, interestIDs){
+  function send_tweet(db, tweet, interestIDs){
     for (var i = 0; i < interestIDs.length; i++){
       var id = interestIDs[i]
       // console.log("id : " + id)
@@ -121,7 +121,7 @@ module.exports = function(io){
       // console.log("currPart: " + currPart)
       //registrationIds.push({'partid':part.partid,'twitterhandle':part.twitterhandle,'email':part.email});
       // console.log("part email: " + currPart['email'])
-      send_tweet_dm(tweet, currPart['partid'], currPart['twitterhandle']);
+      send_tweet_dm(db, tweet, currPart['partid'], currPart['twitterhandle']);
       /*
       if(currDevice['type'] === 'gcm')
         send_tweet_gcm(tweet,currDevice['conn']);
@@ -462,7 +462,7 @@ module.exports = function(io){
                         }
                         // send tweet for judgement to the participants in ids
                         console.log("calling send_tweet....")
-                        send_tweet({"tweetid":tweetid,"topid":topid,"topic":title},ids);
+                        send_tweet(db, {"tweetid":tweetid,"topid":topid,"topic":title},ids);
                       }
                       // mark this tweet as seen so that it is not judged again
                       db.query('insert into seen (topid, tweetid) values (?,?);',[topid,tweetid],function(errors5,results5){
