@@ -75,7 +75,7 @@ module.exports = function(io){
 
 */
 
-  function send_tweet_dm(tweet, partid, twitterhandle){
+  function send_tweet_dm(tweet, partid, twitterhandle) {
     // console.log("hello")
     var text = "https://twitter.com/432142134/status/" + tweet["tweetid"] // used random user id
     text += "\nTopic: " + tweet["topid"] + " - " + tweet["topic"]
@@ -92,8 +92,15 @@ module.exports = function(io){
       console.log("Successful: send_tweet_dm sent out a DM.")
       // console.log(tweet);  // Tweet body.
       // console.log(response);  // Raw response object.
+      console.log("Deleting instantaneous judgements for this topid, tweetid and partid.")
+      db.query('delete from judgements where assessor = ? and topid = ? and tweetid = ?;',[partid, topid, tweet["topid"]],function(errors3,results3){
+        if(errors3){
+          console.log('ERROR: Could not delete instantaneous judgements');
+          return;
+        }
+        console.log("Successful: deleted instantaneous judgements for assessor: %s, topid: %s, tweetid: %s", partid, topid, tweet["topid"]);
+      });
     });
-
   }
 
 
