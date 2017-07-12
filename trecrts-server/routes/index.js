@@ -83,14 +83,14 @@ module.exports = function(io){
     text += "\n\nNot Relevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['notrel'], partid)
     text += "\n\nDuplicate: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['dup'], partid)
 
-    twitter_client.post('direct_messages/new', {screen_name: twitterhandle, text: text},  function(error, tweet, response) {
+    twitter_client.post('direct_messages/new', {screen_name: twitterhandle, text: text},  function(error, tweetResponse, response) {
       if(error) {
         console.log("ERROR:");
         console.log(util.inspect(error, {showHidden: false, depth: null}));
         throw error;
       }
       console.log("Successful: send_tweet_dm sent out a DM.")
-      // console.log(tweet);  // Tweet body.
+      // console.log(tweetResponse);  // Tweet body.
       // console.log(response);  // Raw response object.
       console.log("Deleting instantaneous judgements for this topid, tweetid and partid.")
       db.query('delete from judgements where assessor = ? and topid = ? and tweetid = ?;',[partid, tweet["topid"], tweet["topid"]],function(errors3,results3){
