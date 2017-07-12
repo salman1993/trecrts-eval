@@ -442,7 +442,7 @@ module.exports = function(io){
                           }
                           // send tweet for judgement to the participants in ids
                           console.log("calling send_tweet....")
-                          send_tweet({"tweetid":tweetid,"topid":topid,"topic":title},ids);
+                          send_tweet(db, {"tweetid":tweetid,"topid":topid,"topic":title},ids);
                         }
                         // mark this tweet as seen so that it is not judged again
                         db.query('insert into seen (topid, tweetid) values (?,?);',[topid,tweetid],function(errors5,results5){
