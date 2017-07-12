@@ -84,11 +84,16 @@ module.exports = function(io){
     text += "\n\nDuplicate: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['dup'], partid)
 
     twitter_client.post('direct_messages/new', {screen_name: twitterhandle, text: text},  function(error, tweet, response) {
-      if(error) throw error;
-      console.log("success")
+      if(error) {
+        console.log("ERROR:");
+        console.log(util.inspect(error, {showHidden: false, depth: null}));
+        throw error;
+      }
+      console.log("Successful: send_tweet_dm sent out a DM.")
       // console.log(tweet);  // Tweet body.
       // console.log(response);  // Raw response object.
     });
+
   }
 
 
@@ -415,12 +420,10 @@ module.exports = function(io){
                       loaded = true;
                       // select all participants from the DB and add to registrationIds
                       db.query('select partid,email,twitterhandle from participants;',function(parerror,parresults){
-                        console.log("parresults: " + parresults)
-                        console.log("parresults 0 : " + parresults[0])
+                        console.log("take all participants from the DB and add to registrationIds");
                         for (var i = 0; i < parresults.length; i++) {
                           var part = parresults[i]
-                          console.log("part: " + part)
-                          console.log("part twitterhandle: " + part.twitterhandle)
+                          console.log("participants twitterhandle: " + part.twitterhandle)
                           registrationIds.push({'partid':part.partid,'twitterhandle':part.twitterhandle,'email':part.email});
                         }
                         // MAKE IT SYNCHRONOUS!
