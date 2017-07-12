@@ -92,14 +92,16 @@ module.exports = function(io){
       console.log("Successful: send_tweet_dm sent out a DM.")
       // console.log(tweetResponse);  // Tweet body.
       // console.log(response);  // Raw response object.
-      console.log("Deleting instantaneous judgements for this topid, tweetid and partid.")
-      db.query('delete from judgements where assessor = ? and topid = ? and tweetid = ?;',[partid, tweet["topid"], tweet["topid"]],function(errors3,results3){
-        if(errors3){
-          console.log('ERROR: Could not delete instantaneous judgements');
-          return;
-        }
-        console.log("Successful: deleted instantaneous judgements for assessor: %s, topid: %s, tweetid: %s", partid, tweet["topid"], tweet["topid"]);
-      });
+
+      // you have to pass DB along for this to work
+      // console.log("Deleting instantaneous judgements for this topid, tweetid and partid.")
+      // db.query('delete from judgements where assessor = ? and topid = ? and tweetid = ?;',[partid, tweet["topid"], tweet["tweetid"]],function(errors3,results3){
+      //   if(errors3){
+      //     console.log('ERROR: Could not delete instantaneous judgements');
+      //     return;
+      //   }
+      //   console.log("Successful: deleted instantaneous judgements for assessor: %s, topid: %s, tweetid: %s", partid, tweet["topid"], tweet["topid"]);
+      // });
     });
   }
 
