@@ -93,12 +93,12 @@ module.exports = function(io){
       // console.log(tweet);  // Tweet body.
       // console.log(response);  // Raw response object.
       console.log("Deleting instantaneous judgements for this topid, tweetid and partid.")
-      db.query('delete from judgements where assessor = ? and topid = ? and tweetid = ?;',[partid, topid, tweet["topid"]],function(errors3,results3){
+      db.query('delete from judgements where assessor = ? and topid = ? and tweetid = ?;',[partid, tweet["topid"], tweet["topid"]],function(errors3,results3){
         if(errors3){
           console.log('ERROR: Could not delete instantaneous judgements');
           return;
         }
-        console.log("Successful: deleted instantaneous judgements for assessor: %s, topid: %s, tweetid: %s", partid, topid, tweet["topid"]);
+        console.log("Successful: deleted instantaneous judgements for assessor: %s, topid: %s, tweetid: %s", partid, tweet["topid"], tweet["topid"]);
       });
     });
   }
