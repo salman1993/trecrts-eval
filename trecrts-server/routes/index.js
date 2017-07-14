@@ -174,6 +174,10 @@ module.exports = function(io){
   }
 
   router.get('/judge/:topid/:tweetid/:rel/:partid', function(req,res){
+    var user_agent = req.headers['user-agent']
+    // check that it is not twitterbot
+    console.log(util.format("user agent: %s", user_agent));
+
     var topid = req.params.topid;
     var tweetid = req.params.tweetid;
     var rel = req.params.rel;
