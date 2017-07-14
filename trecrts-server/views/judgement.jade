@@ -7,14 +7,11 @@ html
 
   body
     div(class="alert alert-warning text-center")
-      h1 Non-Relevant
       form(action="/judge/#{topid}/#{tweetid}/0/#{partid}",method="post")
-        button#btnSubmit(type="submit", class="btn btn-lg btn-warning") Non-Relevant
+        button#btnSubmit(type="submit", class="btn btn-lg btn-block btn-warning", style="font-size: 100px;") Non-Relevant
     div(class="alert alert-success text-center")
-      h1 Relevant
       form(action="/judge/#{topid}/#{tweetid}/1/#{partid}",method="post")
-        button#btnSubmit(type="submit", class="btn btn-lg btn-success") Relevant
+        button#btnSubmit(type="submit", class="btn btn-lg btn-block btn-success", style="font-size: 100px;") Relevant
     div(class="alert alert-info text-center")
-      h1 Redundant/Duplicate
       form(action="/judge/#{topid}/#{tweetid}/2/#{partid}",method="post")
-        button#btnSubmit(type="submit", class="btn btn-lg btn-info") Redundant/Duplicate
+        button#btnSubmit(type="submit", class="btn btn-lg btn-block btn-info", style="font-size: 100px;") Redundant/Duplicate

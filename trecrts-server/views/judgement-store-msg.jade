@@ -8,13 +8,13 @@ html
   body
     if judgement == "0"
       div(class="alert alert-warning text-center")
-        h1 Success!!
-        h1 Judgement: non-relevant
+        h1(style="font-size: 80px;") Success!!
+        h1(style="font-size: 80px;") Judgement: non-relevant
     else if judgement == "1"
-        div(class="alert alert-success text-center")
-            h1 Success!!
-            h1 Judgement: relevant
+      div(class="alert alert-success text-center")
+        h1(style="font-size: 80px;") Success!!
+        h1(style="font-size: 80px;") Judgement: relevant
     else
-        div(class="alert alert-info text-center")
-            h1 Success!!
-            h1 Judgement: redundant/duplicate
+      div(class="alert alert-info text-center")
+        h1(style="font-size: 80px;") Success!!
+        h1(style="font-size: 80px;") Judgement: redundant/duplicate
