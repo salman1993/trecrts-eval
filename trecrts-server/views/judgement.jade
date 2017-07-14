@@ -6,15 +6,15 @@ html
       // window.onload = function() { setTimeout(function() { window.close(); }, 3000); };
 
   body
-    if judgement == "0"
-      div(class="alert alert-warning text-center")
-        h1 Success!!
-        h1 Judgement: non-relevant
-    else if judgement == "1"
-        div(class="alert alert-success text-center")
-            h1 Success!!
-            h1 Judgement: relevant
-    else
-        div(class="alert alert-info text-center")
-            h1 Success!!
-            h1 Judgement: redundant/duplicate
+    div(class="alert alert-warning text-center")
+      h1 Non-Relevant
+      form(action="/judge/#{topid}/#{tweetid}/0/#{partid}",method="post")
+        button#btnSubmit(type="submit", class="btn btn-lg btn-warning") Non-Relevant
+    div(class="alert alert-success text-center")
+      h1 Relevant
+      form(action="/judge/#{topid}/#{tweetid}/1/#{partid}",method="post")
+        button#btnSubmit(type="submit", class="btn btn-lg btn-success") Relevant
+    div(class="alert alert-info text-center")
+      h1 Redundant/Duplicate
+      form(action="/judge/#{topid}/#{tweetid}/2/#{partid}",method="post")
+        button#btnSubmit(type="submit", class="btn btn-lg btn-info") Redundant/Duplicate

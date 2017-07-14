@@ -79,9 +79,10 @@ module.exports = function(io){
     // console.log("hello")
     var text = "https://twitter.com/432142134/status/" + tweet["tweetid"] // used random user id
     text += "\nTopic: " + tweet["topid"] + " - " + tweet["topic"]
-    text += "\n\nRelevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['rel'], partid)
-    text += "\n\nNot Relevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['notrel'], partid)
-    text += "\n\nDuplicate: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['dup'], partid)
+    // text += "\n\nRelevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['rel'], partid)
+    // text += "\n\nNot Relevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['notrel'], partid)
+    // text += "\n\nDuplicate: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['dup'], partid)
+    text += "\n\nJudge: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], partid)
 
     twitter_client.post('direct_messages/new', {screen_name: twitterhandle, text: text},  function(error, tweetResponse, response) {
       if(error) {
@@ -166,18 +167,21 @@ module.exports = function(io){
 
   var rel2id = {"notrel": 0, "rel": 1, "dup": 2}
 
-  function generate_judgement_link(topid, tweetid, relid, partid) {
+  function generate_judgement_link(topid, tweetid, partid) {
     // var hostname = "localhost:10101";
     var hostname = "http://scspc654.cs.uwaterloo.ca";
-    var link = util.format('%s/judge/%s/%s/%s/%s', hostname, topid, tweetid, relid, partid);
+    var link = util.format('%s/judge/%s/%s/%s', hostname, topid, tweetid, partid);
     return link;
   }
 
-  router.get('/judge/:topid/:tweetid/:rel/:partid', function(req,res){
-    var user_agent = req.headers['user-agent']
-    // check that it is not twitterbot
-    console.log(util.format("user agent: %s", user_agent));
+  router.get('/judge/:topid/:tweetid/:partid', function(req,res) {
+    var top = req.params.topid;
+    var tweet = req.params.tweetid;
+    var part = req.params.partid;
+    res.render('judgement', { topid: top, tweetid: tweet, partid: part });
+  });
 
+  router.post('/judge/:topid/:tweetid/:rel/:partid', function(req,res){
     var topid = req.params.topid;
     var tweetid = req.params.tweetid;
     var rel = req.params.rel;
@@ -205,11 +209,11 @@ module.exports = function(io){
           if(errors){
             console.log(errors)
             console.log("Unable to log: ",topid," ",tweetid," ",rel);
-            res.status(500).json({message : 'Unable to relevance assessment'})
+            res.status(500).json({message : 'Unable to insert/update relevance assessment'})
           }else{
             console.log("Logged: ",topid," ",tweetid," ",rel);
             // res.send('Success! Stored/Updated the relevance judgement.')
-            res.render('judgement', { judgement: rel });
+            res.render('judgement-store-msg', { judgement: rel });
           }
         });
       });
