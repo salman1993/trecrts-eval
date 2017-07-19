@@ -31,22 +31,6 @@ def generate_judgement_link(topid, tweetid, relid, partid):
     link = '%s/judge/%s/%s/%s/%s' %  (hostname, topid, tweetid, relid, partid)
     return link
 
-def send_tweet_dm(tweetid, topid, partid, twitterhandle, followers, api):
-    text = "https://twitter.com/432142134/status/" + tweetid 
-    text += "\nTopic: " + topid
-    text += "\n\nRelevant: " + generate_judgement_link(topid, tweetid, rel2id['rel'], partid)
-    text += "\n\nNot Relevant: " + generate_judgement_link(topid, tweetid, rel2id['notrel'], partid)
-    text += "\n\nDuplicate: " + generate_judgement_link(topid, tweetid, rel2id['dup'], partid)
-
-    # print(text)
-    try:
-      if twitterhandle in followers: 
-        api.send_direct_message(twitterhandle, text=text)
-      else:
-        print("INFO: {0} not following me so did not send DM to: {0}".format(twitterhandle))
-    except: 
-      print("ERROR: Could not send DM to: {}".format(twitterhandle))
-    
 
 def get_assessors(infile):
   assessors = []
@@ -78,10 +62,6 @@ def add_to_participants(partid, email, handle):
   sql_command = "INSERT INTO participants (partid, email, twitterhandle, deviceid) VALUES (\"{}\", \"{}\", \"{}\", NULL);".format(partid, email, handle)
   execute_sql_command(sql_command)
 
-def add_to_topic_assignments(topid, partid):
-  sql_command = "INSERT INTO topic_assignments (topid, partid) VALUES (\"{}\", \"{}\");".format(topid, partid)
-  execute_sql_command(sql_command)
-
 def get_followers(api):
   followers_list = api.followers() 
   followers_names_set = set()
@@ -109,16 +89,7 @@ def add_assessors(configfile, infile):
 
       # add to participants table
       add_to_participants(partid, email, twitterhandle)
-
-      topid = "FakeTopic"
-      # assign that fake topic to the participant
-      add_to_topic_assignments(topid, partid)
-      print("-" * 90)
-
-      # send an example tweet DM for the fake topic
-      tweetid = "880795158639497219"
-      send_tweet_dm(tweetid, topid, partid, twitterhandle, followers, api)
-
+      
     return assessors
 
 if __name__ == "__main__":
