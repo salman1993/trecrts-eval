@@ -1,4 +1,5 @@
 var express = require('express');
+var device = require('express-device');
 var path = require('path');
 var favicon = require('serve-favicon');
 var morgan = require('morgan');
@@ -43,6 +44,8 @@ var routes = require('./routes/index')(app.io);
 // DATABASE config
 var config = {user: 'salman', host: 'localhost', database: 'trec_rts', connectionLimit: 30};
 var connection = mysql.createPool(config);
+
+app.use(device.capture());
 
 app.use(function(req,res,next){
   res.header('Access-Control-Allow-Origin',"*");

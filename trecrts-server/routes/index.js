@@ -174,21 +174,26 @@ module.exports = function(io){
     return link;
   }
 
+  // show assessors the page to judge tweets with 3 buttons
   router.get('/judge/:topid/:tweetid/:partid', function(req,res) {
     var top = req.params.topid;
     var tweet = req.params.tweetid;
     var part = req.params.partid;
+
     res.render('judgement', { topid: top, tweetid: tweet, partid: part });
   });
 
+  // store judgements in the DB
   router.post('/judge/:topid/:tweetid/:rel/:partid', function(req,res){
     var topid = req.params.topid;
     var tweetid = req.params.tweetid;
     var rel = req.params.rel;
     var partid = req.params.partid;
-    //var partid = "foo";
-    var db = req.db;
+    
+    var devicetype = req.device.type.toLowerCase(); 
+    // console.log("devicetype - ", devicetype);
 
+    var db = req.db;
     // validate partid 
     db.query('select * from participants where partid = ?;',partid,function(errors0,results0){
       if(errors0 || results0.length === 0) {
@@ -204,14 +209,14 @@ module.exports = function(io){
         }
 
         // insert judgement into DB
-        db.query('insert judgements (assessor,topid,tweetid,rel) values (?,?,?,?) ON DUPLICATE KEY UPDATE rel=?, submitted=NOW()',
-                                        [partid,topid,tweetid,rel,rel],function(errors,results){
+        db.query('insert judgements (assessor,topid,tweetid,rel,devicetype) values (?,?,?,?,?) ON DUPLICATE KEY UPDATE rel=?, submitted=NOW()',
+                                        [partid,topid,tweetid,rel,devicetype,rel],function(errors,results){
           if(errors){
             console.log(errors)
-            console.log("Unable to log: ",topid," ",tweetid," ",rel);
+            console.log("Unable to log: ",topid," ",tweetid," ",rel," ",devicetype);
             res.status(500).json({message : 'Unable to insert/update relevance assessment'})
           }else{
-            console.log("Logged: ",topid," ",tweetid," ",rel);
+            console.log("Logged: ",topid," ",tweetid," ",rel," ",devicetype);
             // res.send('Success! Stored/Updated the relevance judgement.')
             res.render('judgement-store-msg', { judgement: rel });
           }
@@ -491,24 +496,6 @@ module.exports = function(io){
     });
   });
 
-  router.post('/judge/:topid/:tweetid/:rel/:partid', function(req,res){
-    var topid = req.params.topid;
-    var tweetid = req.params.tweetid;
-    var rel = req.params.rel;
-    var partid = req.params.partid;
-    //var partid = "foo";
-    var db = req.db;
-    db.query('insert judgements (assessor,topid,tweetid,rel) values (?,?,?,?);',[partid,topid,tweetid,rel],function(errors,results){
-      if(errors){
-        console.log(errors)
-        console.log("Unable to log: ",topid," ",tweetid," ",rel);
-        res.status(500).json({message : 'Unable to relevance assessment'})
-      }else{
-        console.log("Logged: ",topid," ",tweetid," ",rel);
-        res.status(204).send()
-      }
-    });
-  });
 
 // NOT USED IN RTS 2016
 /*  router.get('/judge/:topid/:tweetid/:clientid', function(req,res){
