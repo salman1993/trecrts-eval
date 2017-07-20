@@ -30,8 +30,8 @@ module.exports = function(io){
   var registrationIds = []; // containts partids of all participants
   var loaded = false;
   var regIdx = 0;
-  const RATE_LIMIT = 1000; // max num of tweets per topic per client
-  const ASSESSMENTS_PULL_LIMIT = 1000; // max num of times client can pull assessments per hour
+  const RATE_LIMIT = 10; // max num of tweets per topic per client
+  const ASSESSMENTS_PULL_LIMIT = 1; // max num of times client can pull assessments per 10 minutes
   const MAX_ASS = 3;
   const MAX_CLIENTS = 3;
   function genID(){
@@ -239,13 +239,13 @@ module.exports = function(io){
           return;
         }
 
-        // check that this client did not check for live assessments too many times - PULL LIMIT per 1 HOUR
-        db.query('select count(*) as cnt from assessments_pulled where clientid = ? and topid = ? and submitted between DATE_SUB(NOW(),INTERVAL 1 HOUR) and NOW();', [clientid, topid], function(errors0,results0){
+        // check that this client did not check for live assessments too many times - RATE LIMIT - 1 per 10 minutes
+        db.query('select count(*) as cnt from assessments_pulled where clientid = ? and topid = ? and submitted between DATE_SUB(NOW(),INTERVAL 10 MINUTE) and NOW();', [clientid, topid], function(errors0,results0){
           if(errors0 || results0.length === 0){
             res.status(500).json({'message':'Could not process live assessments for topid, clientid: ' + topid + ' and ' + clientid});
             return;
           }else if(results0[0].cnt >= ASSESSMENTS_PULL_LIMIT){
-            res.status(429).json({'message':'Rate limit exceeded for pulling live assessments for topid, clientid: ' + topid + ' and ' + clientid});
+            res.status(429).json({'message':'Rate limit exceeded (1 per 10 minutes) for pulling live assessments for topid, clientid: ' + topid + ' and ' + clientid});
             return;
           }          
 
