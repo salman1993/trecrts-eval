@@ -1,14 +1,14 @@
 #!/usr/bin/python
 """Add assessors from file
 
-Usage: 
+Usage:
     python addAssessors.py -f [infile]
 """
 
 import sys
 import os
 import argparse
-import math 
+import math
 import random
 import tweepy
 import json
@@ -24,13 +24,6 @@ def generate_assessor_id():
       index = math.floor(random.random() * len(chars))
       key += chars[index]
     return key
-
-def generate_judgement_link(topid, tweetid, relid, partid):
-    # hostname = "localhost:10101"
-    hostname = "http://scspc654.cs.uwaterloo.ca"
-    link = '%s/judge/%s/%s/%s/%s' %  (hostname, topid, tweetid, relid, partid)
-    return link
-
 
 def get_assessors(infile):
   assessors = []
@@ -63,7 +56,7 @@ def add_to_participants(partid, email, handle):
   execute_sql_command(sql_command)
 
 def get_followers(api):
-  followers_list = api.followers() 
+  followers_list = api.followers()
   followers_names_set = set()
   for fol in followers_list:
     followers_names_set.add( fol.screen_name.lower() )
@@ -84,12 +77,12 @@ def add_assessors(configfile, infile):
       # follow twitterhandle
       try:
         api.create_friendship(twitterhandle)
-      except: 
+      except:
         print("ERROR: Could not FOLLOW user: {}".format(twitterhandle))
 
       # add to participants table
       add_to_participants(partid, email, twitterhandle)
-      
+
     return assessors
 
 if __name__ == "__main__":
