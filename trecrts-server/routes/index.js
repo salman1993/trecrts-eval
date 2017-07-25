@@ -168,20 +168,11 @@ module.exports = function(io){
   var rel2id = {"notrel": 0, "rel": 1, "dup": 2}
 
   function generate_judgement_link(topid, tweetid, partid) {
-    // var hostname = "localhost:10101";
-    var hostname = "http://scspc654.cs.uwaterloo.ca";
+    var hostname = "localhost:10101";
+    // var hostname = "http://scspc654.cs.uwaterloo.ca";
     var link = util.format('%s/judge/%s/%s/%s', hostname, topid, tweetid, partid);
     return link;
   }
-
-  // show assessors the page to judge tweets with 3 buttons
-  router.get('/judge/:topid/:tweetid/:partid', function(req,res) {
-    var top = req.params.topid;
-    var tweet = req.params.tweetid;
-    var part = req.params.partid;
-
-    res.render('judgement', { topid: top, tweetid: tweet, partid: part });
-  });
 
   // store judgements in the DB
   router.post('/judge/:topid/:tweetid/:rel/:partid', function(req,res){
@@ -215,15 +206,47 @@ module.exports = function(io){
             console.log(errors)
             console.log("Unable to log: ",topid," ",tweetid," ",rel," ",devicetype);
             res.status(500).json({message : 'Unable to insert/update relevance assessment'})
-          }else{
-            console.log("Logged: ",topid," ",tweetid," ",rel," ",devicetype);
-            // res.send('Success! Stored/Updated the relevance judgement.')
-            res.render('judgement-store-msg', { judgement: rel });
           }
+            
+          console.log("Logged: ",topid," ",tweetid," ",rel," ",devicetype);
+          res.status(200).json({message : 'Success! Stored/Updated the relevance judgement.'})            
         });
       });
     });    
   });
+
+  // assessor app will get back the tweets/topics to judge next
+  router.get('/judge/:partid',function(req,res){
+    var partid = req.params.partid;
+    var db = req.db;
+
+    // validate partid 
+    db.query('select * from participants where partid = ?;',partid,function(errors0,results0){
+      if(errors0 || results0.length === 0) {
+        res.status(500).json({'message':'Invalid participant: ' + partid});
+        return;
+      }
+
+      var join_query = `
+              SELECT requests.topid, topics.title, requests.tweetid 
+              FROM requests INNER JOIN topics ON topics.topid = requests.topid 
+              WHERE requests.topid in 
+                (SELECT topid FROM topic_assignments WHERE partid = ?) 
+                AND tweetid not in 
+                (SELECT tweetid FROM judgements WHERE assessor = ? AND judgements.topid = requests.topid) ORDER BY submitted LIMIT 10;
+            `
+      db.query(join_query, [partid, partid], function(errors1,results1){
+        if(errors1){
+            console.log(errors1)
+            console.log("Unable to get tweets to judge for partid: ",partid);
+            res.status(500).json({message : 'Unable to get tweets to judge for partid'})
+        }
+
+        res.status(200).json(results1);
+      });
+    });
+  });
+
 
   // clients get back live assessments for the tweets posted for this topic
   router.post('/assessments/:topid/:clientid',function(req,res){
@@ -411,85 +434,8 @@ module.exports = function(io){
               res.status(500).json({'message':'Could not process request for topid: ' + topid + ' and ' + tweetid});
               return;
             }
-            // get the count from the seens table for this topicid and tweetid
-            db.query('select count(*) as cnt from seen where topid = ? and tweetid = ?;',[topid,tweetid],function(errors4,results4){
-              if(errors4){
-                console.log("Something bad happened: " + errors4);
-                res.status(500).json({'message':'could not process request for topid: ' + topid + ' and ' + tweetid});
-                return;
-              }
-              // If we have seen the tweet before, do nothing
-              if(results4[0].cnt === 0){
-                // Otherwise send it out to be judged and then insert it
-                // get the topic title
-                db.query('select title from topics where topid = ?;',topid,function(errors2,results2){
-                  if(errors2 || results2.length === 0){
-                    console.log('Something went horribly wrong');
-                    res.status(500).json({'message':'could not process request for topid: ' + topid + ' and ' + tweetid});
-                    return;
-                  }
-                  var title = results2[0].title
-                  // select participants who were assigned to judged this topic
-                  db.query('select partid from topic_assignments where topid = ?;',topid,function(errors3,results3){
-                    if(errors3){
-                      console.log('Something went horribly wrong')
-                      res.status(500).json({'message':'could not process request for topid: ' + topid + ' and ' + tweetid});
-                      return;
-                    }
 
-                    /// PROBLEM: Loading the IDs is not synchronous!
-                    if(!loaded){
-                      loaded = true;
-                      // select all participants from the DB and add to registrationIds
-                      db.query('select partid,email,twitterhandle from participants;',function(parerror,parresults){
-                        console.log("take all participants from the DB and add to registrationIds");
-                        for (var i = 0; i < parresults.length; i++) {
-                          var part = parresults[i]
-                          console.log("participants twitterhandle: " + part.twitterhandle)
-                          registrationIds.push({'partid':part.partid,'twitterhandle':part.twitterhandle,'email':part.email});
-                        }
-                        // MAKE IT SYNCHRONOUS!
-                        console.log(results3)
-                        if (results3.length !== 0){
-                          var ids = []
-                          for(var idx = 0; idx < results3.length; idx++){
-                            ids.push(results3[idx].partid)
-                          }
-                          // send tweet for judgement to the participants in ids
-                          console.log("calling send_tweet....")
-                          send_tweet(db, {"tweetid":tweetid,"topid":topid,"topic":title},ids);
-                        }
-                        // mark this tweet as seen so that it is not judged again
-                        db.query('insert into seen (topid, tweetid) values (?,?);',[topid,tweetid],function(errors5,results5){
-                          console.log(errors5)
-                        });
-
-                      });
-                      console.log("in loaded: " + registrationIds)
-                    }
-                    else {
-                      // results3 contains participants who were assigned to judged this topic
-                      console.log(results3)
-                      if (results3.length !== 0){
-                        var ids = []
-                        for(var idx = 0; idx < results3.length; idx++){
-                          ids.push(results3[idx].partid)
-                        }
-                        // send tweet for judgement to the participants in ids
-                        console.log("calling send_tweet....")
-                        send_tweet(db, {"tweetid":tweetid,"topid":topid,"topic":title},ids);
-                      }
-                      // mark this tweet as seen so that it is not judged again
-                      db.query('insert into seen (topid, tweetid) values (?,?);',[topid,tweetid],function(errors5,results5){
-                        console.log(errors5)
-                      });
-
-                    }
-                  });
-                });
-              }
-            });
-            res.status(204).send();
+            res.status(200).json({'message':'Success: tweet posted'});
           });
         });
       });
