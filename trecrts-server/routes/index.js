@@ -2,31 +2,7 @@ module.exports = function(io){
   const util = require('util');
   var express = require('express')
   var router = express.Router();
-  var Twitter = require('twitter');
 
-  // Twitter config
-  var twitter_config = require('../config.json');
-  var twitter_client = new Twitter(twitter_config);
-
-  // // this works!!
-  // twitter_client.get('statuses/show/869636558374281217', function(error, tweet, response) {
-  //   if(error) throw error;
-  //   console.log(tweet);
-  // });
-
-  // var stream = twitter_client.stream('user')
-  // stream.on('direct_message', function (directMsg) {
-  //   //...
-  // })
-
-/*
-  var gcm = require('node-gcm')
-  var apn = require('apn')
-  var push_auths = require('./push_auths.js')
-  var apnConnection = new apn.Connection()
-
-  var sender = new gcm.Sender(push_auths.gcm);
-*/
   var registrationIds = []; // containts partids of all participants
   var loaded = false;
   var regIdx = 0;
@@ -51,29 +27,6 @@ module.exports = function(io){
     }
     return -1;
   }
-/*  function send_tweet_gcm(tweet,id){
-    var message = new gcm.Message();
-    message.addData('title', 'TREC RTS Mobile Judger');
-    message.addData('message','There are pending tweets to judge.')
-    message.addData('tweetid',String(tweet.tweetid))
-    message.addData('topid',String(tweet.topid))
-    message.addData('topic',String(tweet.topic))
-    message.addData('content-available', '1');
-    sender.send(message, { registrationTokens: [ id ] }, function (err, response) {
-       if(err) console.error("Sending error: " + err);
-       else    console.log("Sending response: " + response);
-    });
-  }
- function send_tweet_apn(tweet,id){
-    var note = new apn.Notification();
-    note.expiry = Math.floor(Date.now() / 1000) + 3600
-    note['content-available'] = 1
-    note.alert = 'There are pending tweets to judge.'
-    note.payload = {'tweetid':String(tweet.tweetid),'topid':String(tweet.topid),'topic':String(tweet.topic),'messageFrom' : 'TREC RTS Mobile Judger'}
-    apnConnection.pushNotification(note,new apn.Device(id))
-  }
-
-*/
 
   function send_tweet_dm(db, tweet, partid, twitterhandle) {
     // console.log("hello")
@@ -84,26 +37,7 @@ module.exports = function(io){
     // text += "\n\nDuplicate: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['dup'], partid)
     text += "\n\nJudge: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], partid)
 
-    twitter_client.post('direct_messages/new', {screen_name: twitterhandle, text: text},  function(error, tweetResponse, response) {
-      if(error) {
-        console.log("ERROR:");
-        console.log(util.inspect(error, {showHidden: false, depth: null}));
-        throw error;
-      }
-      console.log("Successful: send_tweet_dm sent out a DM.")
-      // console.log(tweetResponse);  // Tweet body.
-      // console.log(response);  // Raw response object.
-
-      // you have to pass DB along for this to work
-      // console.log("Deleting instantaneous judgements for this topid, tweetid and partid.")
-      // db.query('delete from judgements where assessor = ? and topid = ? and tweetid = ?;',[partid, tweet["topid"], tweet["tweetid"]],function(errors3,results3){
-      //   if(errors3){
-      //     console.log('ERROR: Could not delete instantaneous judgements');
-      //     return;
-      //   }
-      //   console.log("Successful: deleted instantaneous judgements for assessor: %s, topid: %s, tweetid: %s", partid, tweet["topid"], tweet["topid"]);
-      // });
-    });
+    // post the DM with TwitterClient
   }
 
 
@@ -124,16 +58,8 @@ module.exports = function(io){
       // console.log("currPart: " + currPart)
       //registrationIds.push({'partid':part.partid,'twitterhandle':part.twitterhandle,'email':part.email});
       // console.log("part email: " + currPart['email'])
-      send_tweet_dm(db, tweet, currPart['partid'], currPart['twitterhandle']);
-      /*
-      if(currDevice['type'] === 'gcm')
-        send_tweet_gcm(tweet,currDevice['conn']);
-      else if(currDevice['type'] === 'socket'){
-        send_tweet_socket(tweet,currDevice['conn']);
-      } else if(currDevice['type'] === 'apn'){
-        send_tweet_apn(tweet,currDevice['conn'])
-      }
-      */
+
+      // send_tweet_dm(db, tweet, currPart['partid'], currPart['twitterhandle']);
     }
   }
 
@@ -228,7 +154,7 @@ module.exports = function(io){
       }
 
       var join_query = `
-              SELECT requests.topid, topics.title, requests.tweetid 
+              SELECT requests.topid, topics.title, topics.description, topics.narrative, requests.tweetid 
               FROM requests INNER JOIN topics ON topics.topid = requests.topid 
               WHERE requests.topid in 
                 (SELECT topid FROM topic_assignments WHERE partid = ?) 
