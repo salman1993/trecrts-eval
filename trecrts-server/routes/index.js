@@ -28,41 +28,6 @@ module.exports = function(io){
     return -1;
   }
 
-  function send_tweet_dm(db, tweet, partid, twitterhandle) {
-    // console.log("hello")
-    var text = "https://twitter.com/432142134/status/" + tweet["tweetid"] // used random user id
-    text += "\nTopic: " + tweet["topid"] + " - " + tweet["topic"]
-    // text += "\n\nRelevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['rel'], partid)
-    // text += "\n\nNot Relevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['notrel'], partid)
-    // text += "\n\nDuplicate: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['dup'], partid)
-    text += "\n\nJudge: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], partid)
-
-    // post the DM with TwitterClient
-  }
-
-
-
-  // tweet: {"tweetid":tweetid, "topid":topid, "topic":title}
-  // interestIDs are partids of participants who are assigned to this topic (topicid)
-  function send_tweet(db, tweet, interestIDs){
-    for (var i = 0; i < interestIDs.length; i++){
-      var id = interestIDs[i]
-      // console.log("id : " + id)
-      // console.log("registrationIds: " + registrationIds)
-
-      var idx = find_user(id);
-      // console.log("idx: " + idx)
-      if (idx === -1)
-        continue;
-      var currPart = registrationIds[idx];
-      // console.log("currPart: " + currPart)
-      //registrationIds.push({'partid':part.partid,'twitterhandle':part.twitterhandle,'email':part.email});
-      // console.log("part email: " + currPart['email'])
-
-      // send_tweet_dm(db, tweet, currPart['partid'], currPart['twitterhandle']);
-    }
-  }
-
   function validate(db,table,col, id,cb){
     db.query('select * from '+table+' where '+col+' = ?;',[id],cb);
   }
@@ -134,7 +99,7 @@ module.exports = function(io){
             res.status(500).json({message : 'Unable to insert/update relevance assessment'})
           }
             
-          console.log("Logged: ",topid," ",tweetid," ",rel," ",devicetype);
+          // console.log("Logged: ",topid," ",tweetid," ",rel," ",devicetype);
           res.status(200).json({message : 'Success! Stored/Updated the relevance judgement.'})            
         });
       });
@@ -159,7 +124,7 @@ module.exports = function(io){
               WHERE requests.topid in 
                 (SELECT topid FROM topic_assignments WHERE partid = ?) 
                 AND tweetid not in 
-                (SELECT tweetid FROM judgements WHERE assessor = ? AND judgements.topid = requests.topid) ORDER BY submitted LIMIT 10;
+                (SELECT tweetid FROM judgements WHERE assessor = ? AND judgements.topid = requests.topid) ORDER BY submitted DESC LIMIT 10;
             `
       db.query(join_query, [partid, partid], function(errors1,results1){
         if(errors1){
@@ -253,49 +218,6 @@ module.exports = function(io){
     });
   });
 
-  router.post('/register/mobile/',function(req,res){
-    var db = req.db;
-    var regid = req.body.regid;
-    var partid = req.body.partid;
-    var device = req.body.device;
-    // At least one reg id required
-    db.query('select * from participants where partid = ?;',partid,function(errors0,results0){
-      if(errors0 || results0.length === 0){
-        res.status(500).json({'message':'Unable to identify participant: ' + partid});
-        return;
-      }
-      var idx = find_user(partid)
-      if ( idx === -1 ){
-        if (device === "iOS")
-          registrationIds.push({'partid':partid,'type':'apn','conn':regid});
-        else
-          registrationIds.push({'partid':partid,'type':'gcm','conn':regid});
-        db.query('update participants set deviceid = ? where partid = ?;',[regid,partid],function(errors1,results1){
-          if(errors1){
-            console.log('Unable to update device for partid: ', partid, regid);
-          }
-       });
-      }else{
-         registrationIds[idx].conn = regid;
-         registrationIds[idx].type = device
-         db.query('update participants set deviceid = ?, platform = ? where partid = ?;',[regid,partid,device],function(errors1,results1){
-           if(errors1){
-             console.log('Unable to update device for partid: ', partid, regid);
-           }
-         });
-      }
-      res.status(204).send();
-      // Definitely need to do something better here
-      /*
-      if(tweet_queue.length > 0){
-        for(var i = 0; i < tweet_queue.length; i++){
-          send_tweet(tweet_queue[i]);
-        }
-        tweet_queue = [];
-      }
-      */
-    });
-  });
 
 // NOT USED FOR RTS 2016
 /*  router.post('/tweets/:topid/:clientid',function(req,res){
@@ -361,7 +283,7 @@ module.exports = function(io){
               return;
             }
 
-            res.status(200).json({'message':'Success: tweet posted'});
+            res.status(204).send();
           });
         });
       });
