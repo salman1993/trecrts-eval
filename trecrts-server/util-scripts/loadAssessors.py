@@ -1,5 +1,4 @@
 import os,sys
-import json
 import MySQLdb
 
 # python2 loadAssessors.py [partid file] [royal - assessorfile] [royal - topic mappings]

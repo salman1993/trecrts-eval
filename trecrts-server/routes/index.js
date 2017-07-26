@@ -2,31 +2,7 @@ module.exports = function(io){
   const util = require('util');
   var express = require('express')
   var router = express.Router();
-  var Twitter = require('twitter');
 
-  // Twitter config
-  var twitter_config = require('../config.json');
-  var twitter_client = new Twitter(twitter_config);
-
-  // // this works!!
-  // twitter_client.get('statuses/show/869636558374281217', function(error, tweet, response) {
-  //   if(error) throw error;
-  //   console.log(tweet);
-  // });
-
-  // var stream = twitter_client.stream('user')
-  // stream.on('direct_message', function (directMsg) {
-  //   //...
-  // })
-
-/*
-  var gcm = require('node-gcm')
-  var apn = require('apn')
-  var push_auths = require('./push_auths.js')
-  var apnConnection = new apn.Connection()
-
-  var sender = new gcm.Sender(push_auths.gcm);
-*/
   var registrationIds = []; // containts partids of all participants
   var loaded = false;
   var regIdx = 0;
@@ -40,101 +16,6 @@ module.exports = function(io){
     for(var i=0; i < 12; i++)
       ID += chars.charAt(Math.floor(Math.random()*chars.length));
     return ID;
-  }
-  function send_tweet_socket(tweet,socket){
-    socket.emit('tweet',tweet);
-  }
-  function find_user(partid){
-    for (var idx = 0; idx < registrationIds.length; idx++){
-      if(registrationIds[idx].partid === partid)
-        return idx;
-    }
-    return -1;
-  }
-/*  function send_tweet_gcm(tweet,id){
-    var message = new gcm.Message();
-    message.addData('title', 'TREC RTS Mobile Judger');
-    message.addData('message','There are pending tweets to judge.')
-    message.addData('tweetid',String(tweet.tweetid))
-    message.addData('topid',String(tweet.topid))
-    message.addData('topic',String(tweet.topic))
-    message.addData('content-available', '1');
-    sender.send(message, { registrationTokens: [ id ] }, function (err, response) {
-       if(err) console.error("Sending error: " + err);
-       else    console.log("Sending response: " + response);
-    });
-  }
- function send_tweet_apn(tweet,id){
-    var note = new apn.Notification();
-    note.expiry = Math.floor(Date.now() / 1000) + 3600
-    note['content-available'] = 1
-    note.alert = 'There are pending tweets to judge.'
-    note.payload = {'tweetid':String(tweet.tweetid),'topid':String(tweet.topid),'topic':String(tweet.topic),'messageFrom' : 'TREC RTS Mobile Judger'}
-    apnConnection.pushNotification(note,new apn.Device(id))
-  }
-
-*/
-
-  function send_tweet_dm(db, tweet, partid, twitterhandle) {
-    // console.log("hello")
-    var text = "https://twitter.com/432142134/status/" + tweet["tweetid"] // used random user id
-    text += "\nTopic: " + tweet["topid"] + " - " + tweet["topic"]
-    // text += "\n\nRelevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['rel'], partid)
-    // text += "\n\nNot Relevant: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['notrel'], partid)
-    // text += "\n\nDuplicate: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], rel2id['dup'], partid)
-    text += "\n\nJudge: " + generate_judgement_link(tweet["topid"], tweet["tweetid"], partid)
-
-    twitter_client.post('direct_messages/new', {screen_name: twitterhandle, text: text},  function(error, tweetResponse, response) {
-      if(error) {
-        console.log("ERROR:");
-        console.log(util.inspect(error, {showHidden: false, depth: null}));
-        throw error;
-      }
-      console.log("Successful: send_tweet_dm sent out a DM.")
-      // console.log(tweetResponse);  // Tweet body.
-      // console.log(response);  // Raw response object.
-
-      // you have to pass DB along for this to work
-      // console.log("Deleting instantaneous judgements for this topid, tweetid and partid.")
-      // db.query('delete from judgements where assessor = ? and topid = ? and tweetid = ?;',[partid, tweet["topid"], tweet["tweetid"]],function(errors3,results3){
-      //   if(errors3){
-      //     console.log('ERROR: Could not delete instantaneous judgements');
-      //     return;
-      //   }
-      //   console.log("Successful: deleted instantaneous judgements for assessor: %s, topid: %s, tweetid: %s", partid, tweet["topid"], tweet["topid"]);
-      // });
-    });
-  }
-
-
-
-  // tweet: {"tweetid":tweetid, "topid":topid, "topic":title}
-  // interestIDs are partids of participants who are assigned to this topic (topicid)
-  function send_tweet(db, tweet, interestIDs){
-    for (var i = 0; i < interestIDs.length; i++){
-      var id = interestIDs[i]
-      // console.log("id : " + id)
-      // console.log("registrationIds: " + registrationIds)
-
-      var idx = find_user(id);
-      // console.log("idx: " + idx)
-      if (idx === -1)
-        continue;
-      var currPart = registrationIds[idx];
-      // console.log("currPart: " + currPart)
-      //registrationIds.push({'partid':part.partid,'twitterhandle':part.twitterhandle,'email':part.email});
-      // console.log("part email: " + currPart['email'])
-      send_tweet_dm(db, tweet, currPart['partid'], currPart['twitterhandle']);
-      /*
-      if(currDevice['type'] === 'gcm')
-        send_tweet_gcm(tweet,currDevice['conn']);
-      else if(currDevice['type'] === 'socket'){
-        send_tweet_socket(tweet,currDevice['conn']);
-      } else if(currDevice['type'] === 'apn'){
-        send_tweet_apn(tweet,currDevice['conn'])
-      }
-      */
-    }
   }
 
   function validate(db,table,col, id,cb){
@@ -168,22 +49,14 @@ module.exports = function(io){
   var rel2id = {"notrel": 0, "rel": 1, "dup": 2}
 
   function generate_judgement_link(topid, tweetid, partid) {
-    // var hostname = "localhost:10101";
-    var hostname = "http://scspc654.cs.uwaterloo.ca";
+    var hostname = "localhost:10101";
+    // var hostname = "http://scspc654.cs.uwaterloo.ca";
     var link = util.format('%s/judge/%s/%s/%s', hostname, topid, tweetid, partid);
     return link;
   }
 
-  // show assessors the page to judge tweets with 3 buttons
-  router.get('/judge/:topid/:tweetid/:partid', function(req,res) {
-    var top = req.params.topid;
-    var tweet = req.params.tweetid;
-    var part = req.params.partid;
-
-    res.render('judgement', { topid: top, tweetid: tweet, partid: part });
-  });
-
   // store judgements in the DB
+<<<<<<< HEAD
   router.post('/judge/:topid/:tweetid/:rel/:partid', function(req,res){
     var topid = req.params.topid;
     var tweetid = req.params.tweetid;
@@ -192,6 +65,22 @@ module.exports = function(io){
 
     var devicetype = req.device.type.toLowerCase();
     // console.log("devicetype - ", devicetype);
+=======
+  router.post('/judge', function(req,res){
+    var topid = req.body.topid;
+    var tweetid = req.body.tweetid;
+    var rel = req.body.rel;
+    var partid = req.body.partid;    
+    var useragent = req.body.useragent;
+    var timetaken = req.body.timetaken;
+    
+    // console.log("topid - ", topid);
+    // console.log("tweetid - ", tweetid);
+    // console.log("partid - ", partid);
+    // console.log("rel - ", rel);    
+    // console.log("useragent - ", useragent);
+    // console.log("timetaken - ", timetaken);
+>>>>>>> 47bb42985634020c7a9b234443452e133d6c839a
 
     var db = req.db;
     // validate partid
@@ -209,21 +98,53 @@ module.exports = function(io){
         }
 
         // insert judgement into DB
-        db.query('insert judgements (assessor,topid,tweetid,rel,devicetype) values (?,?,?,?,?) ON DUPLICATE KEY UPDATE rel=?, submitted=NOW()',
-                                        [partid,topid,tweetid,rel,devicetype,rel],function(errors,results){
+        db.query('insert judgements (assessor,topid,tweetid,rel,useragent,timetaken) values (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE rel=?, submitted=NOW()',
+                                        [partid,topid,tweetid,rel,useragent,timetaken,rel],function(errors,results){
           if(errors){
             console.log(errors)
-            console.log("Unable to log: ",topid," ",tweetid," ",rel," ",devicetype);
+            console.log("Unable to log: ",topid," ",tweetid," ",rel," ",useragent," ",timetaken);
             res.status(500).json({message : 'Unable to insert/update relevance assessment'})
-          }else{
-            console.log("Logged: ",topid," ",tweetid," ",rel," ",devicetype);
-            // res.send('Success! Stored/Updated the relevance judgement.')
-            res.render('judgement-store-msg', { judgement: rel });
           }
+            
+          // console.log("Logged: ",topid," ",tweetid," ",rel," ",useragent," ",timetaken);
+          res.status(200).json({message : 'Success! Stored/Updated the relevance judgement.'})            
         });
       });
     });
   });
+
+  // assessor app will get back the tweets/topics to judge next
+  router.get('/judge/:partid',function(req,res){
+    var partid = req.params.partid;
+    var db = req.db;
+
+    // validate partid 
+    db.query('select * from participants where partid = ?;',partid,function(errors0,results0){
+      if(errors0 || results0.length === 0) {
+        res.status(500).json({'message':'Invalid participant: ' + partid});
+        return;
+      }
+
+      var join_query = `
+              SELECT requests.topid, topics.title, topics.description, topics.narrative, requests.tweetid 
+              FROM requests INNER JOIN topics ON topics.topid = requests.topid 
+              WHERE requests.topid in 
+                (SELECT topid FROM topic_assignments WHERE partid = ?) 
+                AND tweetid not in 
+                (SELECT tweetid FROM judgements WHERE assessor = ? AND judgements.topid = requests.topid) ORDER BY submitted DESC LIMIT 20;
+            `
+      db.query(join_query, [partid, partid], function(errors1,results1){
+        if(errors1){
+            console.log(errors1)
+            console.log("Unable to get tweets to judge for partid: ",partid);
+            res.status(500).json({message : 'Unable to get tweets to judge for partid'})
+        }
+
+        res.status(200).json(results1);
+      });
+    });
+  });
+
 
   // clients get back live assessments for the tweets posted for this topic
   router.post('/assessments/:topid/:clientid',function(req,res){
@@ -291,94 +212,8 @@ module.exports = function(io){
     });
   });
 
-  router.get('/validate/part/:partid',function(req,res){
-    var partid = req.params.partid;
-    var db = req.db;
-    validate_participant(db,partid,function(errors0,results0){
-      if (errors0 || results0.length === 0){
-        res.status(500).json({'message': 'Unable to validate client: ' + clientid})
-        return;
-      }else{
-        res.status(204).send()
-      }
-    });
-  });
 
-  router.post('/register/mobile/',function(req,res){
-    var db = req.db;
-    var regid = req.body.regid;
-    var partid = req.body.partid;
-    var device = req.body.device;
-    // At least one reg id required
-    db.query('select * from participants where partid = ?;',partid,function(errors0,results0){
-      if(errors0 || results0.length === 0){
-        res.status(500).json({'message':'Unable to identify participant: ' + partid});
-        return;
-      }
-      var idx = find_user(partid)
-      if ( idx === -1 ){
-        if (device === "iOS")
-          registrationIds.push({'partid':partid,'type':'apn','conn':regid});
-        else
-          registrationIds.push({'partid':partid,'type':'gcm','conn':regid});
-        db.query('update participants set deviceid = ? where partid = ?;',[regid,partid],function(errors1,results1){
-          if(errors1){
-            console.log('Unable to update device for partid: ', partid, regid);
-          }
-       });
-      }else{
-         registrationIds[idx].conn = regid;
-         registrationIds[idx].type = device
-         db.query('update participants set deviceid = ?, platform = ? where partid = ?;',[regid,partid,device],function(errors1,results1){
-           if(errors1){
-             console.log('Unable to update device for partid: ', partid, regid);
-           }
-         });
-      }
-      res.status(204).send();
-      // Definitely need to do something better here
-      /*
-      if(tweet_queue.length > 0){
-        for(var i = 0; i < tweet_queue.length; i++){
-          send_tweet(tweet_queue[i]);
-        }
-        tweet_queue = [];
-      }
-      */
-    });
-  });
-
-// NOT USED FOR RTS 2016
-/*  router.post('/tweets/:topid/:clientid',function(req,res){
-    var topid = req.params.topid;
-    var clientid  = req.params.clientid;
-    var tweets = req.body.tweets;
-    var db = req.db;
-    validate_client(db,clientid,function(errors,results){
-      if (errors || results.length === 0){
-        res.status(500).json({'message': 'Unable to validate client: ' + clientid})
-        return;
-      }
-      stmt = ""
-      for (var i = 0; i < tweets.length; i++){
-        if (! isValidTweet(tweets[i])){
-          res.status(404).json({'message': 'Invalid tweetid: ' + tweets[i]});
-        }
-        if (i !== 0){
-          stmt += ',(\'' + tweets[i] + '\',\'' + topid + '\')';
-        } else {
-          stmt += '(\'' + tweets[i] + '\',\'' + topid + '\')';
-        }
-      }
-      db.query('insert into requests_digest_' + clientid + ' (docid,topid) values ' + [stmt],function(errors0,results0){
-        if (errors)
-          res.status(500).json({'message': 'Unable to insert tweets for end of day digest'});
-        res.status(204).send()
-      });
-    });
-  });*/
-
-  // TODO: Need to enforce topid is valid
+  // teams use this endpoint to post tweets for topics
   router.post('/tweet/:topid/:tweetid/:clientid',function(req,res){
     var topid = req.params.topid;
     var tweetid = req.params.tweetid;
@@ -411,6 +246,7 @@ module.exports = function(io){
               res.status(500).json({'message':'Could not process request for topid: ' + topid + ' and ' + tweetid});
               return;
             }
+<<<<<<< HEAD
             // get the count from the seens table for this topicid and tweetid
             db.query('select count(*) as cnt from seen where topid = ? and tweetid = ?;',[topid,tweetid],function(errors4,results4){
               if(errors4){
@@ -489,6 +325,9 @@ module.exports = function(io){
                 });
               }
             });
+=======
+
+>>>>>>> 47bb42985634020c7a9b234443452e133d6c839a
             res.status(204).send();
           });
         });
@@ -497,28 +336,7 @@ module.exports = function(io){
   });
 
 
-// NOT USED IN RTS 2016
-/*  router.get('/judge/:topid/:tweetid/:clientid', function(req,res){
-    var clientid = req.params.clientid;
-    var topid = req.params.topid;
-    var tweetid = req.params.tweetid;
-    var db = req.db;
-    validate_client(db,clientid,function(errors,results){
-      if(errors || results.length === 0){
-        res.status(500).json({'message':'Could not validate client: ' + clientid})
-        return;
-      }
-      db.query('select rel from judgements where tweetid = ? and topid = ?;'[tweetid],function(errors1,results1){
-        if(errors1){
-          res.status(500).json({'message':'Error retrieving judgement for : '+ tweetid + ' on ' + topid});
-        }else if (results1.length ===0){
-          res.status(500).json({'message':'No judgement for : '+ tweetid + ' on ' + topid});
-        }
-        res.json({'tweetid':tweetid,'topid':topid,'rel':results[0].rel});
-      });
-    });
-  });*/
-
+  // register client and return clientid given they have registered a group
   router.post('/register/system/', function(req,res){
     var groupid = req.body.groupid;
     var alias = req.body.alias;
@@ -551,91 +369,8 @@ module.exports = function(io){
     });
   });
 
-  router.get('/topics/available/:uniqid/:topid', function(req,res){
-    var db = req.db;
-    var uniqid = req.params.uniqid;
-    var topid = req.params.topid;
-    validate_client_or_participant(db,uniqid,function(errors0,results0){
-      if(errors0 || results0.length === 0){
-        res.status(500).json({'message':'Unable to validate ID:' + uniqid});
-        return;
-      }
-      db.query('select count(*) as cnt from topic_assignments where topid = ?;',topid,function(errors1,results1){
-        if(errors1 || results1.length === 0){
-          res.status(500).json({'message':'Error in determining topic availability.'});
-          return;
-        }else if(results1[0].cnt >= MAX_ASS){
-          res.status(404).json({'message':'Sufficient assessors'});
-          return;
-        }
-        res.status(204).send();
-      });
-    });
-  });
-  router.post('/topics/interest/:partid',function(req,res){
-    var partid = req.params.partid;
-    var topids = req.body;
-    var db = req.db;
-    validate_participant(db,partid,function(errors0,results0){
-      if(errors0 || results0.length === 0){
-        res.status(500).json({'message':'Unable to validate participant:'+partid});
-        return
-      }
-      stmt = ""
-      for (var i = 0; i < topids.length; i++){
-        if (i !== 0){
-          stmt += ',(\'' + topids[i] + '\',\'' + partid + '\')';
-        } else {
-          stmt += '(\'' + topids[i] + '\',\'' + partid + '\')';
-        }
-      }
-      db.query('insert ignore into topic_assignments (topid,partid) values ' + [stmt],function(errors1,results1){
-        if (errors1)
-          res.status(500).json({'message': 'Unable to insert topics for partid:' + partid});
-        res.status(204).send()
-      });
-    });
-  });
-  router.get('/topics/interest/:partid',function(req,res){
-    var partid = req.params.partid;
-    var db = req.db;
-    validate_participant(db,partid,function(errors0,results0){
-      if(errors0 || results0.length === 0){
-        res.status(500).json({'message':'Unable to validate participant:'+partid});
-        return
-      }
-      db.query('select topid from topic_assignments where partid = ?;',partid,function(errors1,results1){
-        if(errors1){
-          res.status(500).json({'message':'Unable to fetch assigned topics for: ' + partid})
-          return;
-        }
-        res.json(results)
-      });
-    });
-  });
-  router.post('/topics/suggest/:uniqid',function(req,res){
-    var db = req.db;
-    var uniqid = req.params.uniqid;
-    validate_client_or_participant(db,uniqid,function(errors0,results0){
-      if(errors0 || results0.length === 0){
-        res.status(500).json({'message':'Unable to validate: ' + uniqid})
-        return;
-      }
-      db.query('insert into candidate_topics (title,description) values (?,?);',[req.body.title,req.body.desc],function(errors1,results1){
-        if (errors1)
-          res.status(500).json({'message': 'Unable to insert topic suggestions for:' + uniqid});
-        res.status(204).send()
-      });
-    });
-  });
 
-  router.delete('/unregister/mobile/:partid',function(req,res){
-    var partid = req.params.partid
-    var idx = find_user(partid)
-    if (idx > -1) registrationIds.splice(idx,1)
-    res.status(204).send();
-  });
-
+  // get all requests from this client
   router.get('/log/:clientid',function(req,res){
     var clientid = req.params.clientid;
     var db = req.db;
@@ -654,6 +389,7 @@ module.exports = function(io){
     });
   });
 
+  // get topics with clientid
   router.get('/topics/:uniqid', function(req,res){
     var uniqid = req.params.uniqid;
     var db = req.db;
@@ -672,21 +408,6 @@ module.exports = function(io){
     });
   });
 
-  // TODO: Figure out way to incorporate socket based connections without requiring an actual id
 
-  io.on('connection', function(socket){
-    socket.on('register',function(){
-      console.log("Registered")
-      registrationIds.push({'partid':socket,'type':'socket','conn':socket});
-    });
-    socket.on('judge',function(msg){
-      console.log('Judged: ', msg.topid, msg.tweetid,msg.rel);
-    });
-    socket.once('disconnect',function(){
-      console.log("Disconnect");
-      var idx = find_user(socket);
-      if (idx > -1) registrationIds.splice(idx,1);
-    });
-  });
   return router;
 }
