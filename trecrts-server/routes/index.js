@@ -63,9 +63,9 @@ module.exports = function(io){
     // console.log("rel - ", rel);    
     // console.log("useragent - ", useragent);
     // console.log("timetaken - ", timetaken);
-
+    
     var db = req.db;
-    // validate partid 
+    // validate partid
     db.query('select * from participants where partid = ?;',partid,function(errors0,results0){
       if(errors0 || results0.length === 0) {
         res.status(500).json({'message':'Invalid participant: ' + partid});
@@ -92,7 +92,7 @@ module.exports = function(io){
           res.status(200).json({message : 'Success! Stored/Updated the relevance judgement.'})            
         });
       });
-    });    
+    });
   });
 
   // assessor app will get back the tweets/topics to judge next
@@ -159,7 +159,7 @@ module.exports = function(io){
           }else if(results0[0].cnt >= ASSESSMENTS_PULL_LIMIT){
             res.status(429).json({'message':'Rate limit exceeded (1 per 10 minutes) for pulling live assessments for topid, clientid: ' + topid + ' and ' + clientid});
             return;
-          }          
+          }
 
           var join_query = `
             SELECT DISTINCT judgements.topid, judgements.tweetid, judgements.rel, judgements.submitted
@@ -172,14 +172,14 @@ module.exports = function(io){
               res.status(500).json({'message':'Could not process request (join) for client, topic: ' + clientid + ', ' + topid});
               return;
             }
-            
+
             // gotta check last pulled before insert this entry to assessments_pulled
             db.query('SELECT MAX(submitted) as last FROM assessments_pulled WHERE clientid=? AND topid=?;', [clientid, topid], function(errors3,results3){
               if(errors3){
                 res.status(500).json({'message':'Could not process request (last submitted) for client, topic: ' + clientid + ', ' + topid});
                 return;
-              }              
-              // final_results: list of relevance judgements & last_submitted time 
+              }
+              // final_results: list of relevance judgements & last_submitted time
               var final_results = { judgements: results2, last_pulled: results3[0].last }
 
               // insert into assessments_pulled table the topicid, clientid
@@ -192,7 +192,7 @@ module.exports = function(io){
               });
 
             });
-          });          
+          });
         });
       });
     });
@@ -234,7 +234,7 @@ module.exports = function(io){
               res.status(500).json({'message':'Could not process request for topid: ' + topid + ' and ' + tweetid});
               return;
             }
-
+            
             res.status(204).send();
           });
         });
