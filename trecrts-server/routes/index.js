@@ -66,14 +66,23 @@ module.exports = function(io){
   }
 
   // store judgements in the DB
-  router.post('/judge/:topid/:tweetid/:rel/:partid', function(req,res){
-    var topid = req.params.topid;
-    var tweetid = req.params.tweetid;
-    var rel = req.params.rel;
-    var partid = req.params.partid;
+  router.post('/judge', function(req,res){
+    var topid = req.body.topid;
+    var tweetid = req.body.tweetid;
+    var rel = req.body.rel;
+    var partid = req.body.partid;
     
-    var devicetype = req.device.type.toLowerCase(); 
-    // console.log("devicetype - ", devicetype);
+    var useragent = req.body.useragent;
+    var timetaken = req.body.timetaken;
+    
+
+    console.log("topid - ", topid);
+    console.log("tweetid - ", tweetid);
+    console.log("partid - ", partid);
+    console.log("rel - ", rel);
+    
+    console.log("useragent - ", useragent);
+    console.log("timetaken - ", timetaken);
 
     var db = req.db;
     // validate partid 
@@ -91,15 +100,15 @@ module.exports = function(io){
         }
 
         // insert judgement into DB
-        db.query('insert judgements (assessor,topid,tweetid,rel,devicetype) values (?,?,?,?,?) ON DUPLICATE KEY UPDATE rel=?, submitted=NOW()',
-                                        [partid,topid,tweetid,rel,devicetype,rel],function(errors,results){
+        db.query('insert judgements (assessor,topid,tweetid,rel,useragent,timetaken) values (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE rel=?, submitted=NOW()',
+                                        [partid,topid,tweetid,rel,useragent,timetaken,rel],function(errors,results){
           if(errors){
             console.log(errors)
-            console.log("Unable to log: ",topid," ",tweetid," ",rel," ",devicetype);
+            console.log("Unable to log: ",topid," ",tweetid," ",rel," ",useragent," ",timetaken);
             res.status(500).json({message : 'Unable to insert/update relevance assessment'})
           }
             
-          // console.log("Logged: ",topid," ",tweetid," ",rel," ",devicetype);
+          // console.log("Logged: ",topid," ",tweetid," ",rel," ",useragent," ",timetaken);
           res.status(200).json({message : 'Success! Stored/Updated the relevance judgement.'})            
         });
       });
