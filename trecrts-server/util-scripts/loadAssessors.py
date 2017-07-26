@@ -50,8 +50,8 @@ print(len(anon2partid))
 #---------
 # do the topic mappings in the DB
 
-# db = MySQLdb.connect('localhost','salman','','trec_rts')
-# cursor = db.cursor()
+#db = MySQLdb.connect('localhost','salman','','trec_rts')
+#cursor = db.cursor()
 
 topic_mappings_fname = sys.argv[3]
 count = 0
@@ -69,10 +69,10 @@ with open(topic_mappings_fname, 'r') as f:
                 continue
             partid = anon2partid[anonid]
             print("Assigning partid: {} to topid: {}".format(partid, topid))
-            cursor.execute("""insert into topic_assignments (topid,partid) values (%s,%s);""",(topid,partid));
+            #cursor.execute("""insert into topic_assignments (topid,partid) values (%s,%s);""",(topid,partid));
             count += 1
 
 print("no. of partid-topid mappings: {}".format(count))
 
-# db.commit()
-# db.close()
+#db.commit()
+#db.close()

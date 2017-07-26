@@ -189,12 +189,12 @@ module.exports = function(io){
     var tweetid = req.params.tweetid;
     var rel = req.params.rel;
     var partid = req.params.partid;
-    
-    var devicetype = req.device.type.toLowerCase(); 
+
+    var devicetype = req.device.type.toLowerCase();
     // console.log("devicetype - ", devicetype);
 
     var db = req.db;
-    // validate partid 
+    // validate partid
     db.query('select * from participants where partid = ?;',partid,function(errors0,results0){
       if(errors0 || results0.length === 0) {
         res.status(500).json({'message':'Invalid participant: ' + partid});
@@ -222,7 +222,7 @@ module.exports = function(io){
           }
         });
       });
-    });    
+    });
   });
 
   // clients get back live assessments for the tweets posted for this topic
@@ -252,7 +252,7 @@ module.exports = function(io){
           }else if(results0[0].cnt >= ASSESSMENTS_PULL_LIMIT){
             res.status(429).json({'message':'Rate limit exceeded (1 per 10 minutes) for pulling live assessments for topid, clientid: ' + topid + ' and ' + clientid});
             return;
-          }          
+          }
 
           var join_query = `
             SELECT DISTINCT judgements.topid, judgements.tweetid, judgements.rel, judgements.submitted
@@ -265,14 +265,14 @@ module.exports = function(io){
               res.status(500).json({'message':'Could not process request (join) for client, topic: ' + clientid + ', ' + topid});
               return;
             }
-            
+
             // gotta check last pulled before insert this entry to assessments_pulled
             db.query('SELECT MAX(submitted) as last FROM assessments_pulled WHERE clientid=? AND topid=?;', [clientid, topid], function(errors3,results3){
               if(errors3){
                 res.status(500).json({'message':'Could not process request (last submitted) for client, topic: ' + clientid + ', ' + topid});
                 return;
-              }              
-              // final_results: list of relevance judgements & last_submitted time 
+              }
+              // final_results: list of relevance judgements & last_submitted time
               var final_results = { judgements: results2, last_pulled: results3[0].last }
 
               // insert into assessments_pulled table the topicid, clientid
@@ -285,7 +285,7 @@ module.exports = function(io){
               });
 
             });
-          });          
+          });
         });
       });
     });
@@ -457,7 +457,7 @@ module.exports = function(io){
                           }
                           // send tweet for judgement to the participants in ids
                           console.log("calling send_tweet....")
-                          send_tweet(db, {"tweetid":tweetid,"topid":topid,"topic":title},ids);
+                          // send_tweet(db, {"tweetid":tweetid,"topid":topid,"topic":title},ids);
                         }
                         // mark this tweet as seen so that it is not judged again
                         db.query('insert into seen (topid, tweetid) values (?,?);',[topid,tweetid],function(errors5,results5){
@@ -477,7 +477,7 @@ module.exports = function(io){
                         }
                         // send tweet for judgement to the participants in ids
                         console.log("calling send_tweet....")
-                        send_tweet(db, {"tweetid":tweetid,"topid":topid,"topic":title},ids);
+                        // send_tweet(db, {"tweetid":tweetid,"topid":topid,"topic":title},ids);
                       }
                       // mark this tweet as seen so that it is not judged again
                       db.query('insert into seen (topid, tweetid) values (?,?);',[topid,tweetid],function(errors5,results5){
