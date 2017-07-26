@@ -17,16 +17,6 @@ module.exports = function(io){
       ID += chars.charAt(Math.floor(Math.random()*chars.length));
     return ID;
   }
-  function send_tweet_socket(tweet,socket){
-    socket.emit('tweet',tweet);
-  }
-  function find_user(partid){
-    for (var idx = 0; idx < registrationIds.length; idx++){
-      if(registrationIds[idx].partid === partid)
-        return idx;
-    }
-    return -1;
-  }
 
   function validate(db,table,col, id,cb){
     db.query('select * from '+table+' where '+col+' = ?;',[id],cb);
@@ -70,19 +60,16 @@ module.exports = function(io){
     var topid = req.body.topid;
     var tweetid = req.body.tweetid;
     var rel = req.body.rel;
-    var partid = req.body.partid;
-    
+    var partid = req.body.partid;    
     var useragent = req.body.useragent;
     var timetaken = req.body.timetaken;
     
-
-    console.log("topid - ", topid);
-    console.log("tweetid - ", tweetid);
-    console.log("partid - ", partid);
-    console.log("rel - ", rel);
-    
-    console.log("useragent - ", useragent);
-    console.log("timetaken - ", timetaken);
+    // console.log("topid - ", topid);
+    // console.log("tweetid - ", tweetid);
+    // console.log("partid - ", partid);
+    // console.log("rel - ", rel);    
+    // console.log("useragent - ", useragent);
+    // console.log("timetaken - ", timetaken);
 
     var db = req.db;
     // validate partid 
@@ -214,51 +201,8 @@ module.exports = function(io){
     });
   });
 
-  router.get('/validate/part/:partid',function(req,res){
-    var partid = req.params.partid;
-    var db = req.db;
-    validate_participant(db,partid,function(errors0,results0){
-      if (errors0 || results0.length === 0){
-        res.status(500).json({'message': 'Unable to validate client: ' + clientid})
-        return;
-      }else{
-        res.status(204).send()
-      }
-    });
-  });
 
-
-// NOT USED FOR RTS 2016
-/*  router.post('/tweets/:topid/:clientid',function(req,res){
-    var topid = req.params.topid;
-    var clientid  = req.params.clientid;
-    var tweets = req.body.tweets;
-    var db = req.db;
-    validate_client(db,clientid,function(errors,results){
-      if (errors || results.length === 0){
-        res.status(500).json({'message': 'Unable to validate client: ' + clientid})
-        return;
-      }
-      stmt = ""
-      for (var i = 0; i < tweets.length; i++){
-        if (! isValidTweet(tweets[i])){
-          res.status(404).json({'message': 'Invalid tweetid: ' + tweets[i]});
-        }
-        if (i !== 0){
-          stmt += ',(\'' + tweets[i] + '\',\'' + topid + '\')';
-        } else {
-          stmt += '(\'' + tweets[i] + '\',\'' + topid + '\')';
-        }
-      }
-      db.query('insert into requests_digest_' + clientid + ' (docid,topid) values ' + [stmt],function(errors0,results0){
-        if (errors)
-          res.status(500).json({'message': 'Unable to insert tweets for end of day digest'});
-        res.status(204).send()
-      });
-    });
-  });*/
-
-  // TODO: Need to enforce topid is valid
+  // teams use this endpoint to post tweets for topics
   router.post('/tweet/:topid/:tweetid/:clientid',function(req,res){
     var topid = req.params.topid;
     var tweetid = req.params.tweetid;
@@ -300,28 +244,7 @@ module.exports = function(io){
   });
 
 
-// NOT USED IN RTS 2016
-/*  router.get('/judge/:topid/:tweetid/:clientid', function(req,res){
-    var clientid = req.params.clientid;
-    var topid = req.params.topid;
-    var tweetid = req.params.tweetid;
-    var db = req.db;
-    validate_client(db,clientid,function(errors,results){
-      if(errors || results.length === 0){
-        res.status(500).json({'message':'Could not validate client: ' + clientid})
-        return;
-      }
-      db.query('select rel from judgements where tweetid = ? and topid = ?;'[tweetid],function(errors1,results1){
-        if(errors1){
-          res.status(500).json({'message':'Error retrieving judgement for : '+ tweetid + ' on ' + topid});
-        }else if (results1.length ===0){
-          res.status(500).json({'message':'No judgement for : '+ tweetid + ' on ' + topid});
-        }
-        res.json({'tweetid':tweetid,'topid':topid,'rel':results[0].rel});
-      });
-    });
-  });*/
-
+  // register client and return clientid given they have registered a group
   router.post('/register/system/', function(req,res){
     var groupid = req.body.groupid;
     var alias = req.body.alias;
@@ -354,91 +277,8 @@ module.exports = function(io){
     });
   });
 
-  router.get('/topics/available/:uniqid/:topid', function(req,res){
-    var db = req.db;
-    var uniqid = req.params.uniqid;
-    var topid = req.params.topid;
-    validate_client_or_participant(db,uniqid,function(errors0,results0){
-      if(errors0 || results0.length === 0){
-        res.status(500).json({'message':'Unable to validate ID:' + uniqid});
-        return;
-      }
-      db.query('select count(*) as cnt from topic_assignments where topid = ?;',topid,function(errors1,results1){
-        if(errors1 || results1.length === 0){
-          res.status(500).json({'message':'Error in determining topic availability.'});
-          return;
-        }else if(results1[0].cnt >= MAX_ASS){
-          res.status(404).json({'message':'Sufficient assessors'});
-          return;
-        }
-        res.status(204).send();
-      });
-    });
-  });
-  router.post('/topics/interest/:partid',function(req,res){
-    var partid = req.params.partid;
-    var topids = req.body;
-    var db = req.db;
-    validate_participant(db,partid,function(errors0,results0){
-      if(errors0 || results0.length === 0){
-        res.status(500).json({'message':'Unable to validate participant:'+partid});
-        return
-      }
-      stmt = ""
-      for (var i = 0; i < topids.length; i++){
-        if (i !== 0){
-          stmt += ',(\'' + topids[i] + '\',\'' + partid + '\')';
-        } else {
-          stmt += '(\'' + topids[i] + '\',\'' + partid + '\')';
-        }
-      }
-      db.query('insert ignore into topic_assignments (topid,partid) values ' + [stmt],function(errors1,results1){
-        if (errors1)
-          res.status(500).json({'message': 'Unable to insert topics for partid:' + partid});
-        res.status(204).send()
-      });
-    });
-  });
-  router.get('/topics/interest/:partid',function(req,res){
-    var partid = req.params.partid;
-    var db = req.db;
-    validate_participant(db,partid,function(errors0,results0){
-      if(errors0 || results0.length === 0){
-        res.status(500).json({'message':'Unable to validate participant:'+partid});
-        return
-      }
-      db.query('select topid from topic_assignments where partid = ?;',partid,function(errors1,results1){
-        if(errors1){
-          res.status(500).json({'message':'Unable to fetch assigned topics for: ' + partid})
-          return;
-        }
-        res.json(results)
-      });
-    });
-  });
-  router.post('/topics/suggest/:uniqid',function(req,res){
-    var db = req.db;
-    var uniqid = req.params.uniqid;
-    validate_client_or_participant(db,uniqid,function(errors0,results0){
-      if(errors0 || results0.length === 0){
-        res.status(500).json({'message':'Unable to validate: ' + uniqid})
-        return;
-      }
-      db.query('insert into candidate_topics (title,description) values (?,?);',[req.body.title,req.body.desc],function(errors1,results1){
-        if (errors1)
-          res.status(500).json({'message': 'Unable to insert topic suggestions for:' + uniqid});
-        res.status(204).send()
-      });
-    });
-  });
 
-  router.delete('/unregister/mobile/:partid',function(req,res){
-    var partid = req.params.partid
-    var idx = find_user(partid)
-    if (idx > -1) registrationIds.splice(idx,1)
-    res.status(204).send();
-  });
-
+  // get all requests from this client
   router.get('/log/:clientid',function(req,res){
     var clientid = req.params.clientid;
     var db = req.db;
@@ -457,6 +297,7 @@ module.exports = function(io){
     });
   });
 
+  // get topics with clientid
   router.get('/topics/:uniqid', function(req,res){
     var uniqid = req.params.uniqid;
     var db = req.db;
@@ -475,21 +316,6 @@ module.exports = function(io){
     });
   });
 
-  // TODO: Figure out way to incorporate socket based connections without requiring an actual id
 
-  io.on('connection', function(socket){
-    socket.on('register',function(){
-      console.log("Registered")
-      registrationIds.push({'partid':socket,'type':'socket','conn':socket});
-    });
-    socket.on('judge',function(msg){
-      console.log('Judged: ', msg.topid, msg.tweetid,msg.rel);
-    });
-    socket.once('disconnect',function(){
-      console.log("Disconnect");
-      var idx = find_user(socket);
-      if (idx > -1) registrationIds.splice(idx,1);
-    });
-  });
   return router;
 }
