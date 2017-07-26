@@ -46,14 +46,7 @@ module.exports = function(io){
     return str.match('[0-9]=') !== null
   }
 
-  var rel2id = {"notrel": 0, "rel": 1, "dup": 2}
-
-  function generate_judgement_link(topid, tweetid, partid) {
-    var hostname = "localhost:10101";
-    // var hostname = "http://scspc654.cs.uwaterloo.ca";
-    var link = util.format('%s/judge/%s/%s/%s', hostname, topid, tweetid, partid);
-    return link;
-  }
+  var rel2id = {"notrel": 0, "rel": 1, "dup": 2};
 
   // store judgements in the DB
   router.post('/judge', function(req,res){
@@ -136,7 +129,11 @@ module.exports = function(io){
 
 
   // clients get back live assessments for the tweets posted for this topic
-  router.post('/assessments/:topid/:clientid',function(req,res){
+  router.post('/assessments/:topid/:clientid',function(req,res) {
+    var fake = {"judgements": [], "last_pulled": null}
+    res.json(fake); //send back fake results
+
+    /***
     var topid = req.params.topid;
     var tweetid = req.params.tweetid;
     var clientid = req.params.clientid;
@@ -199,6 +196,8 @@ module.exports = function(io){
         });
       });
     });
+
+    ***/
   });
 
 
