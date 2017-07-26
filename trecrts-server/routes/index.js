@@ -133,7 +133,7 @@ module.exports = function(io){
               WHERE requests.topid in 
                 (SELECT topid FROM topic_assignments WHERE partid = ?) 
                 AND tweetid not in 
-                (SELECT tweetid FROM judgements WHERE assessor = ? AND judgements.topid = requests.topid) ORDER BY submitted DESC LIMIT 10;
+                (SELECT tweetid FROM judgements WHERE assessor = ? AND judgements.topid = requests.topid) ORDER BY submitted DESC LIMIT 20;
             `
       db.query(join_query, [partid, partid], function(errors1,results1){
         if(errors1){
