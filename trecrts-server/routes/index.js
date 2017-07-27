@@ -130,10 +130,6 @@ module.exports = function(io){
 
   // clients get back live assessments for the tweets posted for this topic
   router.post('/assessments/:topid/:clientid',function(req,res) {
-    var fake = {"judgements": [], "last_pulled": null}
-    res.json(fake); //send back fake results
-
-    /***
     var topid = req.params.topid;
     var tweetid = req.params.tweetid;
     var clientid = req.params.clientid;
@@ -196,8 +192,6 @@ module.exports = function(io){
         });
       });
     });
-
-    ***/
   });
 
 
