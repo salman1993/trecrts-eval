@@ -53,17 +53,17 @@ module.exports = function(io){
     var topid = req.body.topid;
     var tweetid = req.body.tweetid;
     var rel = req.body.rel;
-    var partid = req.body.partid;    
+    var partid = req.body.partid;
     var useragent = req.body.useragent;
     var timetaken = req.body.timetaken;
-    
+
     // console.log("topid - ", topid);
     // console.log("tweetid - ", tweetid);
     // console.log("partid - ", partid);
-    // console.log("rel - ", rel);    
+    // console.log("rel - ", rel);
     // console.log("useragent - ", useragent);
     // console.log("timetaken - ", timetaken);
-    
+
     var db = req.db;
     // validate partid
     db.query('select * from participants where partid = ?;',partid,function(errors0,results0){
@@ -87,9 +87,9 @@ module.exports = function(io){
             console.log("Unable to log: ",topid," ",tweetid," ",rel," ",useragent," ",timetaken);
             res.status(500).json({message : 'Unable to insert/update relevance assessment'})
           }
-            
+
           // console.log("Logged: ",topid," ",tweetid," ",rel," ",useragent," ",timetaken);
-          res.status(200).json({message : 'Success! Stored/Updated the relevance judgement.'})            
+          res.status(200).json({message : 'Success! Stored/Updated the relevance judgement.'})
         });
       });
     });
@@ -100,7 +100,7 @@ module.exports = function(io){
     var partid = req.params.partid;
     var db = req.db;
 
-    // validate partid 
+    // validate partid
     db.query('select * from participants where partid = ?;',partid,function(errors0,results0){
       if(errors0 || results0.length === 0) {
         res.status(500).json({'message':'Invalid participant: ' + partid});
@@ -108,11 +108,11 @@ module.exports = function(io){
       }
 
       var join_query = `
-              SELECT requests.topid, topics.title, topics.description, topics.narrative, requests.tweetid 
-              FROM requests INNER JOIN topics ON topics.topid = requests.topid 
-              WHERE requests.topid in 
-                (SELECT topid FROM topic_assignments WHERE partid = ?) 
-                AND tweetid not in 
+              SELECT requests.topid, topics.title, topics.description, topics.narrative, requests.tweetid
+              FROM requests INNER JOIN topics ON topics.topid = requests.topid
+              WHERE requests.topid in
+                (SELECT topid FROM topic_assignments WHERE partid = ?)
+                AND tweetid not in
                 (SELECT tweetid FROM judgements WHERE assessor = ? AND judgements.topid = requests.topid) ORDER BY submitted DESC LIMIT 20;
             `
       db.query(join_query, [partid, partid], function(errors1,results1){
@@ -234,7 +234,7 @@ module.exports = function(io){
               res.status(500).json({'message':'Could not process request for topid: ' + topid + ' and ' + tweetid});
               return;
             }
-            
+
             res.status(204).send();
           });
         });
