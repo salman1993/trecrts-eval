@@ -215,7 +215,7 @@ module.exports = function(io){
         }
         // check that this client did not post too many tweets (count) for this topicid
         // db.query('select count(*) as cnt from requests where clientid = ? and topid = ? and submitted between DATE_SUB(NOW(),INTERVAL 1 DAY) and NOW();', [clientid, topid], function(errors0,results0){
-        db.query('select count(*) as cnt from requests where clientid = ? and topid = ? and DATE(submitted) = DATE(NOW());', [clientid, topid], function(errors0,results0){
+        db.query('select count(*) as cnt from requests where clientid = ? and topid = ? and DATE(submitted) = DATE(UTC_TIMESTAMP());', [clientid, topid], function(errors0,results0){
           if(errors0 || results0.length === 0){
             res.status(500).json({'message':'Could not process request for topid: ' + topid + ' and ' + tweetid});
             return;
