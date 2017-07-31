@@ -41,7 +41,8 @@ app.set('view engine', 'jade');
 var routes = require('./routes/index')(app.io);
 
 // DATABASE config
-var config = {user: 'salman', host: 'localhost', database: 'trec_rts', connectionLimit: 30, timezone: 'Z'};
+// timezone - The timezone configured on the MySQL server. This is used to type cast server date/time values to JavaScript Date object and vice versa. This can be 'local', 'Z', or an offset in the form +HH:MM or -HH:MM. (Default: 'local')
+var config = {user: 'salman', host: 'localhost', database: 'trec_rts', connectionLimit: 30, timezone: 'local'};
 var connection = mysql.createPool(config);
 
 app.use(function(req,res,next){
