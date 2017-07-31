@@ -28,6 +28,15 @@ Details for the Broker API can be found here[https://github.com/aroegies/trecrts
     + Add appropriate group identifiers to the groups table
     + Add any new topics to the topics table and creating the corresponding judgements table and seen table for the topic based upon the judgements_template table and seen_template respectively
       * For example, create table judgements_MBFoo like judgements_template; and create table seen_MBFoo like seen_template;
+    + Change default time in the MySQL configuration file to UTC
+    ```
+    [mysqld]
+    default_time_zone = '+00:00'
+    ```
+    + Check the timezone was changed properly
+    ```
+    select @@global.time_zone, @@session.time_zone;
+    ```
 
 ### Running the Broker
   - Standard Express.js invocation, `npm start`
