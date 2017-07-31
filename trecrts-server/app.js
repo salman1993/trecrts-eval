@@ -22,13 +22,13 @@ var logger = new winston.Logger({
       host:'localhost',
       connectionLimit:15,
       table:'log_table',
-      user: 'salman'}) 
+      user: 'salman'})
   ],
   exitOnError: false
 })
 logger.stream = {
   write: function(message,encoding){
-    logger.info(message) 
+    logger.info(message)
   }
 }
 var app = express();
@@ -42,7 +42,7 @@ var routes = require('./routes/index')(app.io);
 
 // DATABASE config
 // timezone - The timezone configured on the MySQL server. This is used to type cast server date/time values to JavaScript Date object and vice versa. This can be 'local', 'Z', or an offset in the form +HH:MM or -HH:MM. (Default: 'local')
-var config = {user: 'salman', host: 'localhost', database: 'trec_rts', connectionLimit: 30, timezone: 'local'};
+var config = {user: 'salman', host: 'localhost', database: 'trec_rts', connectionLimit: 30, timezone: 'utc'};
 var connection = mysql.createPool(config);
 
 app.use(function(req,res,next){
