@@ -41,7 +41,7 @@ app.set('view engine', 'jade');
 var routes = require('./routes/index')(app.io);
 
 // DATABASE config
-var config = {user: 'salman', host: 'localhost', database: 'trec_rts', timezone: 'utc', connectionLimit: 30};
+var config = {user: 'salman', host: 'localhost', database: 'trec_rts', connectionLimit: 30, timezone: 'utc', dateStrings: true};
 var connection = mysql.createPool(config);
 
 app.use(function(req,res,next){
